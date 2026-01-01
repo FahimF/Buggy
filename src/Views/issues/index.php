@@ -48,13 +48,24 @@
                         <th>Assigned To</th>
                         <th>Author</th>
                         <th>Created</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="issueList">
                     <?php foreach ($issues as $issue): ?>
                     <tr data-id="<?= $issue['id'] ?>">
-                        <td class="text-center text-muted"><i class="bi bi-grip-vertical handle" style="cursor: move;"></i></td>
+                        <td class="text-center">
+                            <i class="bi bi-grip-vertical handle d-block text-muted mb-2" style="cursor: move;"></i>
+                            <div class="btn-group-vertical btn-group-sm">
+                                <a href="/issues/<?= $issue['id'] ?>/edit" class="btn btn-outline-primary border-0 p-1" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form action="/issues/<?= $issue['id'] ?>/delete" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this issue?');">
+                                    <button type="submit" class="btn btn-outline-danger border-0 p-1" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
                         <td>
                             <a href="/issues/<?= $issue['id'] ?>" class="text-decoration-none fw-bold">
                                 <?= htmlspecialchars($issue['title']) ?>
@@ -99,18 +110,6 @@
                         </td>
                         <td><?= htmlspecialchars($issue['creator_name']) ?></td>
                         <td class="small text-muted"><?= date('M j', strtotime($issue['created_at'])) ?></td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <a href="/issues/<?= $issue['id'] ?>/edit" class="btn btn-outline-primary" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <form action="/issues/<?= $issue['id'] ?>/delete" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this issue?');">
-                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
