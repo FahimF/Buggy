@@ -160,7 +160,7 @@
 
     ## License
 
-    ![License: MIT](img.shields.io)(opensource.org)
+    [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
     This project is licensed under the terms of the [MIT license](LICENSE).
 
