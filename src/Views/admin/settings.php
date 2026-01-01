@@ -13,6 +13,10 @@
         <input type="number" name="settings[items_per_page]" class="form-control" value="<?= htmlspecialchars($settings['items_per_page'] ?? '20') ?>">
     </div>
     <div class="mb-3">
+        <label>Quill Editor Base Font Size</label>
+        <input type="text" name="settings[quill_base_font_size]" class="form-control" value="<?= htmlspecialchars($settings['quill_base_font_size'] ?? '16px') ?>" placeholder="e.g. 16px or 1rem">
+    </div>
+    <div class="mb-3">
         <label>Allow Public Registration (Coming Soon)</label>
         <select name="settings[allow_registration]" class="form-select">
             <option value="0" <?= ($settings['allow_registration'] ?? '0') == '0' ? 'selected' : '' ?>>No</option>

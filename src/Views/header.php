@@ -29,6 +29,15 @@
             background-color: #fd7e14 !important;
             color: white;
         }
+        .ql-editor {
+            font-size: <?= Settings::get('quill_base_font_size') ?: '16px' ?> !important;
+        }
+        .ql-editor h1 { font-size: 2em; }
+        .ql-editor h2 { font-size: 1.5em; }
+        .ql-editor h3 { font-size: 1.17em; }
+        .ql-editor h4 { font-size: 1em; }
+        .ql-editor h5 { font-size: 0.83em; }
+        .ql-editor h6 { font-size: 0.67em; }
     </style>
 </head>
 <?php
