@@ -20,7 +20,14 @@
             </div>
             
             <div class="row">
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Type</label>
+                    <select name="type" class="form-select">
+                        <option value="Bug" <?= ($issue['type'] ?? 'Bug') === 'Bug' ? 'selected' : '' ?>>Bug</option>
+                        <option value="Feature" <?= ($issue['type'] ?? 'Bug') === 'Feature' ? 'selected' : '' ?>>Feature</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select">
                         <?php 
@@ -33,7 +40,7 @@
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-4 mb-3">
                     <label class="form-label">Assign To</label>
                     <select name="assigned_to" class="form-select">
                         <option value="">-- Unassigned --</option>

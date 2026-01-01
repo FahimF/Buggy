@@ -27,6 +27,13 @@
                 <?php foreach ($columnIssues as $issue): ?>
                 <div class="card mb-2 shadow-sm kanban-card" data-id="<?= $issue['id'] ?>">
                     <div class="card-body p-3">
+                        <div class="mb-2">
+                            <?php if (($issue['type'] ?? 'Bug') === 'Bug'): ?>
+                                <span class="badge bg-danger rounded-pill" style="font-size: 0.7em;">Bug</span>
+                            <?php else: ?>
+                                <span class="badge bg-info text-dark rounded-pill" style="font-size: 0.7em;">Feature</span>
+                            <?php endif; ?>
+                        </div>
                         <h6 class="card-title">
                             <a href="/issues/<?= $issue['id'] ?>" class="text-decoration-none text-dark"><?= htmlspecialchars($issue['title']) ?></a>
                         </h6>

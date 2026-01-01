@@ -93,6 +93,14 @@
             <div class="card-header">Details</div>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item">
+                    <strong>Type:</strong>
+                    <?php if (($issue['type'] ?? 'Bug') === 'Bug'): ?>
+                        <span class="badge bg-danger">Bug</span>
+                    <?php else: ?>
+                        <span class="badge bg-info text-dark">Feature</span>
+                    <?php endif; ?>
+                </li>
+                <li class="list-group-item">
                     <strong>Status:</strong>
                     <span class="badge bg-secondary"><?= htmlspecialchars($issue['status']) ?></span>
                 </li>

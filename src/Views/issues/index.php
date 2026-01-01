@@ -20,7 +20,9 @@
         <div class="btn-group">
             <a href="?sort=created_at&dir=DESC" class="btn btn-sm btn-outline-secondary">Newest</a>
             <a href="?sort=created_at&dir=ASC" class="btn btn-sm btn-outline-secondary">Oldest</a>
+            <a href="?sort=title&dir=ASC" class="btn btn-sm btn-outline-secondary">Title</a>
             <a href="?sort=status&dir=ASC" class="btn btn-sm btn-outline-secondary">Status</a>
+            <a href="?sort=type&dir=ASC" class="btn btn-sm btn-outline-secondary">Type</a>
             <a href="?sort=sort_order&dir=ASC" class="btn btn-sm btn-outline-secondary">Custom Order</a>
         </div>
     </div>
@@ -31,6 +33,7 @@
                     <tr>
                         <th style="width: 50px;"></th>
                         <th>Title</th>
+                        <th>Type</th>
                         <th>Status</th>
                         <th>Assigned To</th>
                         <th>Author</th>
@@ -49,6 +52,13 @@
                             <div class="description-preview">
                                 <?= strip_tags($issue['description']) ?>
                             </div>
+                        </td>
+                        <td>
+                            <?php if (($issue['type'] ?? 'Bug') === 'Bug'): ?>
+                                <span class="badge bg-danger">Bug</span>
+                            <?php else: ?>
+                                <span class="badge bg-info text-dark">Feature</span>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <span class="badge bg-<?= $issue['status'] === 'Completed' ? 'success' : ($issue['status'] === 'In Progress' ? 'primary' : 'secondary') ?>">

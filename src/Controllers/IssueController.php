@@ -12,7 +12,7 @@ class IssueController {
     private function getIssues($projectId, $orderBy = 'created_at DESC') {
         $db = Database::connect();
         // Allow safe column names for sorting
-        $allowedSorts = ['created_at', 'updated_at', 'title', 'status', 'sort_order'];
+        $allowedSorts = ['created_at', 'updated_at', 'title', 'status', 'type', 'sort_order'];
         $orderParts = explode(' ', $orderBy);
         $col = $orderParts[0];
         $dir = isset($orderParts[1]) ? $orderParts[1] : 'ASC';
@@ -72,16 +72,17 @@ class IssueController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $projectId = $_POST['project_id'];
             $title = $_POST['title'];
+            $type = $_POST['type'] ?? 'Bug';
             $description = $_POST['description']; // HTML from Quill
             $assignedTo = !empty($_POST['assigned_to']) ? $_POST['assigned_to'] : null;
             $status = $_POST['status'] ?? 'Unassigned';
             $creatorId = Auth::user()['id'];
 
             $db = Database::connect();
-            $stmt = $db->prepare("INSERT INTO issues (project_id, title, description, creator_id, assigned_to_id, status) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$projectId, $title, $description, $creatorId, $assignedTo, $status]);
+            $stmt = $db->prepare("INSERT INTO issues (project_id, title, type, description, creator_id, assigned_to_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$projectId, $title, $type, $description, $creatorId, $assignedTo, $status]);
             
-            Logger::log('Issue Created', "Issue: $title in Project ID: $projectId");
+            Logger::log('Issue Created', "Issue: $title ($type) in Project ID: $projectId");
             
             // Handle attachments if any (simplification: assume handled separately or simple file upload)
             
@@ -140,13 +141,14 @@ class IssueController {
         Auth::requireLogin();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $title = $_POST['title'];
+            $type = $_POST['type'];
             $description = $_POST['description'];
             $assignedTo = !empty($_POST['assigned_to']) ? $_POST['assigned_to'] : null;
             $status = $_POST['status'];
 
             $db = Database::connect();
-            $stmt = $db->prepare("UPDATE issues SET title = ?, description = ?, assigned_to_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-            $stmt->execute([$title, $description, $assignedTo, $status, $id]);
+            $stmt = $db->prepare("UPDATE issues SET title = ?, type = ?, description = ?, assigned_to_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$title, $type, $description, $assignedTo, $status, $id]);
             
             // Fetch project ID for redirection
             $stmt = $db->prepare("SELECT project_id FROM issues WHERE id = ?");

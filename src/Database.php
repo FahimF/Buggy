@@ -40,6 +40,7 @@ class Database {
                 project_id INTEGER NOT NULL,
                 title TEXT NOT NULL,
                 description TEXT,
+                type TEXT DEFAULT 'Bug',
                 creator_id INTEGER NOT NULL,
                 assigned_to_id INTEGER,
                 status TEXT DEFAULT 'Unassigned',
@@ -85,6 +86,13 @@ class Database {
 
         foreach ($queries as $query) {
             self::$pdo->exec($query);
+        }
+
+        // Migration for existing tables
+        try {
+            self::$pdo->exec("ALTER TABLE issues ADD COLUMN type TEXT DEFAULT 'Bug'");
+        } catch (PDOException $e) {
+            // Column likely already exists
         }
     }
 }

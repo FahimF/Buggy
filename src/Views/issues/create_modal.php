@@ -13,7 +13,14 @@
                         <input type="text" name="title" class="form-control" required>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
+                            <label>Type</label>
+                            <select name="type" class="form-select">
+                                <option value="Bug">Bug</option>
+                                <option value="Feature">Feature</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
                             <label>Status</label>
                             <select name="status" class="form-select">
                                 <option value="Unassigned">Unassigned</option>
@@ -23,7 +30,7 @@
                                 <option value="Won't Do">Won't Do</option>
                             </select>
                         </div>
-                        <div class="col-md-6 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label>Assign To</label>
                             <select name="assigned_to" class="form-select">
                                 <option value="">-- Unassigned --</option>
