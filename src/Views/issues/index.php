@@ -21,13 +21,19 @@
             <?php 
             $baseParams = $_GET;
             $hideCompletedParam = isset($hideCompleted) && $hideCompleted ? '&hide_completed=1' : '&hide_completed=0';
+            
+            function sortLink($col, $label, $currentSort, $currentDir, $hideCompletedParam) {
+                $isActive = $currentSort === $col;
+                $newDir = ($isActive && $currentDir === 'ASC') ? 'DESC' : 'ASC';
+                $icon = '';
+                if ($isActive) {
+                    $icon = $currentDir === 'ASC' ? ' <i class="bi bi-caret-up-fill"></i>' : ' <i class="bi bi-caret-down-fill"></i>';
+                }
+                return '<a href="?sort=' . $col . '&dir=' . $newDir . $hideCompletedParam . '" class="text-decoration-none text-dark">' . $label . $icon . '</a>';
+            }
             ?>
             <a href="?sort=created_at&dir=DESC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Newest</a>
             <a href="?sort=created_at&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Oldest</a>
-            <a href="?sort=priority&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Priority</a>
-            <a href="?sort=title&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Title</a>
-            <a href="?sort=status&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Status</a>
-            <a href="?sort=type&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Type</a>
             <a href="?sort=sort_order&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Custom Order</a>
         </div>
         <div class="form-check form-switch m-0">
@@ -41,13 +47,13 @@
                 <thead>
                     <tr>
                         <th style="width: 50px;"></th>
-                        <th>Title</th>
-                        <th>Priority</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Assigned To</th>
-                        <th>Author</th>
-                        <th>Created</th>
+                        <th><?= sortLink('title', 'Title', $sort, $dir, $hideCompletedParam) ?></th>
+                        <th><?= sortLink('priority', 'Priority', $sort, $dir, $hideCompletedParam) ?></th>
+                        <th><?= sortLink('type', 'Type', $sort, $dir, $hideCompletedParam) ?></th>
+                        <th><?= sortLink('status', 'Status', $sort, $dir, $hideCompletedParam) ?></th>
+                        <th><?= sortLink('assigned_to_name', 'Assigned To', $sort, $dir, $hideCompletedParam) ?></th>
+                        <th><?= sortLink('creator_name', 'Author', $sort, $dir, $hideCompletedParam) ?></th>
+                        <th><?= sortLink('created_at', 'Created', $sort, $dir, $hideCompletedParam) ?></th>
                     </tr>
                 </thead>
                 <tbody id="issueList">

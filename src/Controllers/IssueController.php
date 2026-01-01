@@ -12,7 +12,7 @@ class IssueController {
     private function getIssues($projectId, $orderBy = 'created_at DESC', $hideCompleted = false) {
         $db = Database::connect();
         // Allow safe column names for sorting
-        $allowedSorts = ['created_at', 'updated_at', 'title', 'status', 'type', 'sort_order', 'priority'];
+        $allowedSorts = ['created_at', 'updated_at', 'title', 'status', 'type', 'sort_order', 'priority', 'assigned_to_name', 'creator_name'];
         $orderParts = explode(' ', $orderBy);
         $col = $orderParts[0];
         $dir = isset($orderParts[1]) ? $orderParts[1] : 'ASC';
