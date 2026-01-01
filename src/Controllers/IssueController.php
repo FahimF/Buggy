@@ -34,6 +34,16 @@ class IssueController {
                 ELSE 4 END $dir";
         }
 
+        if ($col === 'status') {
+            $orderClause = "CASE 
+               WHEN status = 'Unassigned' THEN 1 
+               WHEN status = 'In Progress' THEN 2 
+               WHEN status = 'Ready for QA' THEN 3 
+               WHEN status = 'Completed' THEN 4 
+               WHEN status = 'WND' THEN 5
+               ELSE 6 END $dir";
+       }
+
         $sql = "SELECT i.*, u.username as assigned_to_name, c.username as creator_name 
                 FROM issues i 
                 LEFT JOIN users u ON i.assigned_to_id = u.id 
