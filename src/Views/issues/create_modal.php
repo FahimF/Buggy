@@ -49,11 +49,13 @@
 </div>
 
 <script>
-    var quill = new Quill('#editor-container', {
-        theme: 'snow'
+    document.addEventListener('DOMContentLoaded', function() {
+        var quill = new Quill('#editor-container', {
+            theme: 'snow'
+        });
+        
+        document.getElementById('createIssueForm').onsubmit = function() {
+            document.getElementById('descriptionInput').value = quill.root.innerHTML;
+        };
     });
-    
-    document.getElementById('createIssueForm').onsubmit = function() {
-        document.getElementById('descriptionInput').value = quill.root.innerHTML;
-    };
 </script>

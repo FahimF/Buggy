@@ -53,6 +53,12 @@ if ($uri === '/' || $uri === '/index.php') {
     (new IssueController())->reorder();
 } elseif (preg_match('#^/issues/(\d+)$#', $uri, $matches)) {
     (new IssueController())->show($matches[1]);
+} elseif (preg_match('#^/issues/(\d+)/edit$#', $uri, $matches)) {
+    (new IssueController())->edit($matches[1]);
+} elseif (preg_match('#^/issues/(\d+)/update$#', $uri, $matches)) {
+    (new IssueController())->update($matches[1]);
+} elseif (preg_match('#^/issues/(\d+)/delete$#', $uri, $matches)) {
+    (new IssueController())->delete($matches[1]);
 } elseif ($uri === '/comments/create') {
     (new CommentController())->create();
 } elseif ($uri === '/admin' || $uri === '/admin/users') {

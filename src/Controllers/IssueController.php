@@ -121,6 +121,62 @@ class IssueController {
         require __DIR__ . '/../Views/issues/show.php';
     }
 
+    public function edit($id) {
+        Auth::requireLogin();
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT * FROM issues WHERE id = ?");
+        $stmt->execute([$id]);
+        $issue = $stmt->fetch();
+        
+        if (!$issue) die("Issue not found");
+        
+        $project = $this->getProject($issue['project_id']);
+        $users = $this->getAllUsers();
+
+        require __DIR__ . '/../Views/issues/edit.php';
+    }
+
+    public function update($id) {
+        Auth::requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $title = $_POST['title'];
+            $description = $_POST['description'];
+            $assignedTo = !empty($_POST['assigned_to']) ? $_POST['assigned_to'] : null;
+            $status = $_POST['status'];
+
+            $db = Database::connect();
+            $stmt = $db->prepare("UPDATE issues SET title = ?, description = ?, assigned_to_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$title, $description, $assignedTo, $status, $id]);
+            
+            // Fetch project ID for redirection
+            $stmt = $db->prepare("SELECT project_id FROM issues WHERE id = ?");
+            $stmt->execute([$id]);
+            $issue = $stmt->fetch();
+
+            header("Location: /projects/" . $issue['project_id']);
+        }
+    }
+
+    public function delete($id) {
+        Auth::requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $db = Database::connect();
+            
+            // Get project ID before delete for redirect
+            $stmt = $db->prepare("SELECT project_id FROM issues WHERE id = ?");
+            $stmt->execute([$id]);
+            $issue = $stmt->fetch();
+            
+            if ($issue) {
+                $stmt = $db->prepare("DELETE FROM issues WHERE id = ?");
+                $stmt->execute([$id]);
+                header("Location: /projects/" . $issue['project_id']);
+            } else {
+                die("Issue not found");
+            }
+        }
+    }
+
     public function updateStatus() {
         Auth::requireLogin();
         $input = json_decode(file_get_contents('php://input'), true);

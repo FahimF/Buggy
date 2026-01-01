@@ -12,7 +12,19 @@
     <div class="col-md-8">
         <div class="card mb-4">
             <div class="card-body">
-                <h2 class="card-title"><?= htmlspecialchars($issue['title']) ?></h2>
+                <div class="d-flex justify-content-between align-items-start">
+                    <h2 class="card-title"><?= htmlspecialchars($issue['title']) ?></h2>
+                    <div class="btn-group">
+                        <a href="/issues/<?= $issue['id'] ?>/edit" class="btn btn-outline-primary">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <form action="/issues/<?= $issue['id'] ?>/delete" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this issue?');">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
                 <div class="mb-3 text-muted small">
                     Created by <strong><?= htmlspecialchars($issue['creator_name']) ?></strong> on <?= date('M j, Y H:i', strtotime($issue['created_at'])) ?>
                 </div>
