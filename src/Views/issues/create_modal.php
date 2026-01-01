@@ -58,7 +58,50 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var quill = new Quill('#editor-container', {
-            theme: 'snow'
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
+                    ['image', 'code-block']
+                ]
+            }
+        });
+
+        // Add tooltips
+        var tooltipMap = {
+            'bold': 'Bold',
+            'italic': 'Italic',
+            'underline': 'Underline',
+            'strike': 'Strikethrough',
+            'list': {
+                'ordered': 'Ordered List',
+                'bullet': 'Bullet List',
+                'check': 'Checklist'
+            },
+            'image': 'Insert Image',
+            'code-block': 'Code Block',
+            'color': 'Text Color',
+            'background': 'Background Color',
+            'header': 'Header Style'
+        };
+
+        Object.keys(tooltipMap).forEach(function(className) {
+            var elements = document.querySelectorAll('.ql-' + className);
+            elements.forEach(function(el) {
+                var value = tooltipMap[className];
+                if (typeof value === 'object') {
+                    // Handle buttons with specific values (like lists)
+                    var val = el.value || ''; 
+                    if (value[val]) {
+                        el.setAttribute('title', value[val]);
+                    }
+                } else {
+                    el.setAttribute('title', value);
+                }
+            });
         });
         
         document.getElementById('createIssueForm').onsubmit = function() {

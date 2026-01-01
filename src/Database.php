@@ -31,6 +31,7 @@ class Database {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 color TEXT DEFAULT '#007bff',
+                text_color TEXT DEFAULT '#ffffff',
                 owner_id INTEGER NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (owner_id) REFERENCES users(id)
@@ -91,6 +92,12 @@ class Database {
         // Migration for existing tables
         try {
             self::$pdo->exec("ALTER TABLE issues ADD COLUMN type TEXT DEFAULT 'Bug'");
+        } catch (PDOException $e) {
+            // Column likely already exists
+        }
+
+        try {
+            self::$pdo->exec("ALTER TABLE projects ADD COLUMN text_color TEXT DEFAULT '#ffffff'");
         } catch (PDOException $e) {
             // Column likely already exists
         }

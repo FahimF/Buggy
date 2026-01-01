@@ -11,13 +11,22 @@
     <?php foreach ($projects as $project): ?>
     <div class="col-md-4 mb-4">
         <div class="card h-100 shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center" style="background-color: <?= htmlspecialchars($project['color']) ?>; color: white;">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background-color: <?= htmlspecialchars($project['color']) ?>; color: <?= htmlspecialchars($project['text_color'] ?? '#ffffff') ?>;">
                 <h5 class="card-title mb-0"><?= htmlspecialchars($project['name']) ?></h5>
                 <div class="dropdown">
-                    <button class="btn btn-link text-white p-0" data-bs-toggle="dropdown">
+                    <button class="btn btn-link p-0" style="color: <?= htmlspecialchars($project['text_color'] ?? '#ffffff') ?>;" data-bs-toggle="dropdown">
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <button class="dropdown-item edit-project-btn" 
+                                data-id="<?= $project['id'] ?>"
+                                data-name="<?= htmlspecialchars($project['name']) ?>"
+                                data-color="<?= htmlspecialchars($project['color']) ?>"
+                                data-text-color="<?= htmlspecialchars($project['text_color'] ?? '#ffffff') ?>">
+                                Edit
+                            </button>
+                        </li>
                         <li>
                             <form action="/projects/delete" method="post" onsubmit="return confirm('Are you sure?');">
                                 <input type="hidden" name="id" value="<?= $project['id'] ?>">
@@ -65,6 +74,10 @@
                         <label>Color</label>
                         <input type="color" name="color" class="form-control form-control-color" value="#007bff">
                     </div>
+                    <div class="mb-3">
+                        <label>Text Color</label>
+                        <input type="color" name="text_color" class="form-control form-control-color" value="#ffffff">
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -74,5 +87,60 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Project Modal -->
+<div class="modal fade" id="editProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/projects/update" method="post">
+                <input type="hidden" name="id" id="editProjectId">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Project Name</label>
+                        <input type="text" name="name" id="editProjectName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Color</label>
+                        <input type="color" name="color" id="editProjectColor" class="form-control form-control-color">
+                    </div>
+                    <div class="mb-3">
+                        <label>Text Color</label>
+                        <input type="color" name="text_color" id="editProjectTextColor" class="form-control form-control-color">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var editModal = new bootstrap.Modal(document.getElementById('editProjectModal'));
+    
+    document.querySelectorAll('.edit-project-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            var id = this.getAttribute('data-id');
+            var name = this.getAttribute('data-name');
+            var color = this.getAttribute('data-color');
+            var textColor = this.getAttribute('data-text-color');
+            
+            document.getElementById('editProjectId').value = id;
+            document.getElementById('editProjectName').value = name;
+            document.getElementById('editProjectColor').value = color;
+            document.getElementById('editProjectTextColor').value = textColor;
+            
+            editModal.show();
+        });
+    });
+});
+</script>
 
 <?php require __DIR__ . '/../footer.php'; ?>

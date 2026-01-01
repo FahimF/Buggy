@@ -39,6 +39,8 @@ if ($uri === '/' || $uri === '/index.php') {
     (new AuthController())->logout();
 } elseif ($uri === '/projects/create') {
     (new ProjectController())->create();
+} elseif ($uri === '/projects/update') {
+    (new ProjectController())->update();
 } elseif ($uri === '/projects/delete') {
     (new ProjectController())->delete();
 } elseif (preg_match('#^/projects/(\d+)$#', $uri, $matches)) {
@@ -65,6 +67,10 @@ if ($uri === '/' || $uri === '/index.php') {
     (new AdminController())->users();
 } elseif ($uri === '/admin/users/toggle_admin') {
     (new AdminController())->toggleAdmin();
+} elseif ($uri === '/admin/users/create') {
+    (new AdminController())->createUser();
+} elseif ($uri === '/admin/users/update') {
+    (new AdminController())->updateUser();
 } elseif ($uri === '/admin/users/delete') {
     (new AdminController())->deleteUser();
 } elseif ($uri === '/admin/logs') {

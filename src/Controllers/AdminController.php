@@ -79,4 +79,62 @@ class AdminController {
             header('Location: /admin/users');
         }
     }
+
+    public function createUser() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $username = $_POST['username'];
+            $password = $_POST['password'];
+            $isAdmin = isset($_POST['is_admin']) ? 1 : 0;
+
+            if (empty($username) || empty($password)) {
+                die("Username and password are required");
+            }
+
+            // Check if username exists
+            $db = Database::connect();
+            $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
+            $stmt->execute([$username]);
+            if ($stmt->fetch()) {
+                die("Username already exists");
+            }
+
+            Auth::register($username, $password, $isAdmin);
+            Logger::log('User Created', "Created user: $username");
+            header('Location: /admin/users');
+        }
+    }
+
+    public function updateUser() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $userId = $_POST['user_id'];
+            $username = $_POST['username'];
+            $password = $_POST['password'];
+            $isAdmin = isset($_POST['is_admin']) ? 1 : 0;
+
+            if (empty($username)) {
+                die("Username is required");
+            }
+
+            $db = Database::connect();
+
+            // Check uniqueness if username changed
+            $stmt = $db->prepare("SELECT id FROM users WHERE username = ? AND id != ?");
+            $stmt->execute([$username, $userId]);
+            if ($stmt->fetch()) {
+                die("Username already exists");
+            }
+
+            if (!empty($password)) {
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $db->prepare("UPDATE users SET username = ?, password_hash = ?, is_admin = ? WHERE id = ?");
+                $stmt->execute([$username, $hash, $isAdmin, $userId]);
+            } else {
+                $stmt = $db->prepare("UPDATE users SET username = ?, is_admin = ? WHERE id = ?");
+                $stmt->execute([$username, $isAdmin, $userId]);
+            }
+
+            Logger::log('User Updated', "Updated user ID: $userId");
+            header('Location: /admin/users');
+        }
+    }
 }
