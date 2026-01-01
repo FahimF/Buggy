@@ -2,9 +2,22 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Projects</h1>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createProjectModal">
-        <i class="bi bi-plus-lg"></i> New Project
-    </button>
+    <div>
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-sort-down"></i> Sort
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="?sort=created_at">Newest First</a></li>
+                <li><a class="dropdown-item" href="?sort=updated">Last Updated</a></li>
+                <li><a class="dropdown-item" href="?sort=active_issues">Most Active Issues</a></li>
+                <li><a class="dropdown-item" href="?sort=name">Name (A-Z)</a></li>
+            </ul>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createProjectModal">
+            <i class="bi bi-plus-lg"></i> New Project
+        </button>
+    </div>
 </div>
 
 <div class="row">
@@ -18,6 +31,13 @@
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a href="#" class="dropdown-item add-issue-btn" data-project-id="<?= $project['id'] ?>" data-type="Bug">Add Bug</a>
+                        </li>
+                        <li>
+                            <a href="#" class="dropdown-item add-issue-btn" data-project-id="<?= $project['id'] ?>" data-type="Feature">Add Feature</a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
                         <li>
                             <button class="dropdown-item edit-project-btn" 
                                 data-id="<?= $project['id'] ?>"
@@ -45,7 +65,22 @@
                         <i class="bi bi-exclamation-circle"></i> Active: <?= $project['active_issues'] ?>
                     </span>
                 </div>
-                <p class="card-text">
+
+                <!-- User Stats -->
+                <?php if (isset($projectStats[$project['id']])): ?>
+                <div class="mb-3">
+                    <small class="text-muted d-block mb-1">Active Tasks by User:</small>
+                    <div class="d-flex flex-wrap gap-1">
+                        <?php foreach ($projectStats[$project['id']] as $stat): ?>
+                            <span class="badge bg-secondary" style="font-size: 0.75rem;">
+                                <?= htmlspecialchars($stat['username']) ?>: <?= $stat['count'] ?>
+                            </span>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <p class="card-text mt-3">
                     <small class="text-muted">Owner: <?= htmlspecialchars($project['owner_name']) ?></small><br>
                     <small class="text-muted">Created: <?= date('M j, Y', strtotime($project['created_at'])) ?></small>
                 </p>
@@ -121,8 +156,12 @@
     </div>
 </div>
 
+<!-- Reuse the Create Issue Modal -->
+<?php require __DIR__ . '/../issues/create_modal.php'; ?>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Edit Project Modal Logic
     var editModal = new bootstrap.Modal(document.getElementById('editProjectModal'));
     
     document.querySelectorAll('.edit-project-btn').forEach(btn => {
@@ -138,6 +177,22 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('editProjectTextColor').value = textColor;
             
             editModal.show();
+        });
+    });
+
+    // Add Issue (Bug/Feature) Modal Logic
+    var createIssueModal = new bootstrap.Modal(document.getElementById('createIssueModal'));
+
+    document.querySelectorAll('.add-issue-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var projectId = this.getAttribute('data-project-id');
+            var type = this.getAttribute('data-type');
+
+            document.getElementById('createIssueProjectId').value = projectId;
+            document.getElementById('createIssueType').value = type;
+            
+            createIssueModal.show();
         });
     });
 });

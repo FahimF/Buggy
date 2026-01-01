@@ -2,7 +2,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form action="/issues/create" method="post" id="createIssueForm">
-                <input type="hidden" name="project_id" value="<?= $project['id'] ?>">
+                <input type="hidden" name="project_id" id="createIssueProjectId" value="<?= isset($project) ? $project['id'] : '' ?>">
                 <div class="modal-header">
                     <h5 class="modal-title">New Issue</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -15,7 +15,7 @@
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label>Type</label>
-                            <select name="type" class="form-select">
+                            <select name="type" id="createIssueType" class="form-select">
                                 <option value="Bug">Bug</option>
                                 <option value="Feature">Feature</option>
                             </select>
