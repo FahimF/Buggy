@@ -112,7 +112,7 @@
                 </li>
                 <li class="list-group-item">
                     <strong>Status:</strong>
-                    <span class="badge bg-secondary"><?= htmlspecialchars($issue['status']) ?></span>
+                    <span class="badge <?= getStatusBadgeClass($issue['status']) ?>"><?= htmlspecialchars($issue['status']) ?></span>
                 </li>
                 <li class="list-group-item">
                     <strong>Assigned To:</strong>

@@ -20,7 +20,7 @@ class ProjectController {
         $stmt = $db->query("
             SELECT p.*, u.username as owner_name,
                 (SELECT COUNT(*) FROM issues WHERE project_id = p.id) as total_issues,
-                (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND status NOT IN ('Completed', 'Won''t Do')) as active_issues,
+                (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND status NOT IN ('Completed', 'WND')) as active_issues,
                 COALESCE((SELECT MAX(updated_at) FROM issues WHERE project_id = p.id), p.created_at) as last_activity
             FROM projects p 
             JOIN users u ON p.owner_id = u.id 
@@ -36,7 +36,7 @@ class ProjectController {
             SELECT i.project_id, u.username, COUNT(i.id) as count
             FROM issues i
             JOIN users u ON i.assigned_to_id = u.id
-            WHERE i.status NOT IN ('Completed', 'Won''t Do')
+            WHERE i.status NOT IN ('Completed', 'WND')
             GROUP BY i.project_id, u.username
         ";
         $statsRows = $db->query($statsQuery)->fetchAll();

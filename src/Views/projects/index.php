@@ -72,7 +72,11 @@
                     <small class="text-muted d-block mb-1">Active Tasks by User:</small>
                     <div class="d-flex flex-wrap gap-1">
                         <?php foreach ($projectStats[$project['id']] as $stat): ?>
-                            <span class="badge bg-secondary" style="font-size: 0.75rem;">
+                            <?php 
+                            $isCurrentUser = $stat['username'] === Auth::user()['username'];
+                            $badgeClass = $isCurrentUser ? 'bg-warning text-dark' : 'bg-secondary';
+                            ?>
+                            <span class="badge <?= $badgeClass ?>" style="font-size: 0.75rem;">
                                 <?= htmlspecialchars($stat['username']) ?>: <?= $stat['count'] ?>
                             </span>
                         <?php endforeach; ?>

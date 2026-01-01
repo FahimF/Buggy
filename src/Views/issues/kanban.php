@@ -21,7 +21,7 @@
         <div class="card bg-light h-100 border-0">
             <div class="card-header bg-white border-bottom-0 fw-bold sticky-top">
                 <?= htmlspecialchars($columnName) ?>
-                <span class="badge bg-secondary rounded-pill float-end"><?= count($columnIssues) ?></span>
+                <span class="badge <?= getStatusBadgeClass($columnName) ?> rounded-pill float-end"><?= count($columnIssues) ?></span>
             </div>
             <div class="card-body p-2 kanban-column" data-status="<?= htmlspecialchars($columnName) ?>" id="col-<?= md5($columnName) ?>">
                 <?php foreach ($columnIssues as $issue): ?>

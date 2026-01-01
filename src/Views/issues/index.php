@@ -80,13 +80,17 @@
                             <?php endif; ?>
                         </td>
                         <td>
-                            <span class="badge bg-<?= $issue['status'] === 'Completed' ? 'success' : ($issue['status'] === 'In Progress' ? 'primary' : 'secondary') ?>">
+                            <span class="badge <?= getStatusBadgeClass($issue['status']) ?>">
                                 <?= htmlspecialchars($issue['status']) ?>
                             </span>
                         </td>
                         <td>
                             <?php if ($issue['assigned_to_name']): ?>
-                                <span class="badge rounded-pill bg-light text-dark border">
+                                <?php 
+                                $isCurrentUser = $issue['assigned_to_name'] === Auth::user()['username'];
+                                $badgeClass = $isCurrentUser ? 'bg-warning text-dark' : 'bg-light text-dark border';
+                                ?>
+                                <span class="badge rounded-pill <?= $badgeClass ?>">
                                     <?= htmlspecialchars($issue['assigned_to_name']) ?>
                                 </span>
                             <?php else: ?>

@@ -25,8 +25,30 @@
             font-size: 0.85rem;
             color: #6c757d;
         }
+        .bg-orange {
+            background-color: #fd7e14 !important;
+            color: white;
+        }
     </style>
 </head>
+<?php
+function getStatusBadgeClass($status) {
+    switch ($status) {
+        case 'Unassigned':
+            return 'bg-secondary';
+        case 'In Progress':
+            return 'bg-warning text-dark';
+        case 'Ready for QA':
+            return 'bg-orange';
+        case 'Completed':
+            return 'bg-success';
+        case 'WND':
+            return 'bg-danger';
+        default:
+            return 'bg-secondary';
+    }
+}
+?>
 <body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
