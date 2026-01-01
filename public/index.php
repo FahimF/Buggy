@@ -77,6 +77,8 @@ if ($uri === '/' || $uri === '/index.php') {
     (new AdminController())->logs();
 } elseif ($uri === '/admin/settings') {
     (new AdminController())->settings();
+} elseif ($uri === '/admin/settings/test-email') {
+    (new AdminController())->testEmail();
 } else {
     http_response_code(404);
     echo "404 Not Found";

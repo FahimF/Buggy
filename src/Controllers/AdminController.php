@@ -44,6 +44,68 @@ class AdminController {
         require __DIR__ . '/../Views/admin/layout.php';
     }
 
+    public function testEmail() {
+        // Prevent PHP warnings from messing up the JSON response
+        ini_set('display_errors', 0);
+        header('Content-Type: application/json');
+        
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['success' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+                $input = json_decode(file_get_contents('php://input'), true);
+                $email = $input['email'] ?? '';
+        
+                if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid email address']);
+                    exit;
+                }
+        
+                $smtpHost = $input['smtp_host'] ?? Settings::get('smtp_host');
+                $smtpPort = $input['smtp_port'] ?? Settings::get('smtp_port', 587);
+                $smtpUser = $input['smtp_user'] ?? Settings::get('smtp_user');
+                $smtpPass = $input['smtp_pass'] ?? Settings::get('smtp_pass');
+                $smtpEncryption = $input['smtp_encryption'] ?? Settings::get('smtp_encryption', 'tls');
+                $smtpFrom = $input['smtp_from'] ?? Settings::get('smtp_from', 'noreply@buggy.local');
+        
+                if (empty($smtpHost)) {
+                    echo json_encode(['success' => false, 'message' => 'SMTP Host is required']);
+                    exit;
+                }
+        
+                $subject = 'Test Email from Buggy';
+                $message = 'This is a test email from your Buggy application settings. If you received this, email sending is working correctly.';
+                $headers = [
+                    'From' => "Buggy <$smtpFrom>",
+                    'Reply-To' => $smtpFrom,
+                    'X-Mailer' => 'Buggy/1.0'
+                ];
+        
+                // Clear any previous output
+                if (ob_get_length()) ob_clean();
+        
+                // Send via SMTP
+                try {
+                    $smtp = new SMTP(
+                        $smtpHost,
+                        $smtpPort,
+                        $smtpUser,
+                        $smtpPass,
+                        $smtpEncryption
+                    );
+                    
+                    if ($smtp->send($email, $subject, $message, $headers)) {
+                        echo json_encode(['success' => true, 'message' => 'Test email sent successfully via SMTP']);
+                    } else {
+                        echo json_encode(['success' => false, 'message' => 'Failed to send email (Unknown error)']);
+                    }
+                } catch (Exception $e) {
+                    echo json_encode(['success' => false, 'message' => 'SMTP Error: ' . $e->getMessage()]);
+                }
+                exit;
+            }
     public function toggleAdmin() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $userId = $_POST['user_id'];
@@ -85,11 +147,16 @@ class AdminController {
     public function createUser() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $username = $_POST['username'];
+            $email = !empty($_POST['email']) ? $_POST['email'] : null;
             $password = $_POST['password'];
             $isAdmin = isset($_POST['is_admin']) ? 1 : 0;
 
             if (empty($username) || empty($password)) {
                 die("Username and password are required");
+            }
+
+            if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                die("Invalid email address");
             }
 
             // Check if username exists
@@ -100,7 +167,7 @@ class AdminController {
                 die("Username already exists");
             }
 
-            Auth::register($username, $password, $isAdmin);
+            Auth::register($username, $password, $isAdmin, $email);
             Logger::log('User Created', "Created user: $username");
             header('Location: /admin/users');
         }
@@ -110,11 +177,16 @@ class AdminController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $userId = $_POST['user_id'];
             $username = $_POST['username'];
+            $email = !empty($_POST['email']) ? $_POST['email'] : null;
             $password = $_POST['password'];
             $isAdmin = isset($_POST['is_admin']) ? 1 : 0;
 
             if (empty($username)) {
                 die("Username is required");
+            }
+
+            if ($email && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                die("Invalid email address");
             }
 
             $db = Database::connect();
@@ -128,11 +200,11 @@ class AdminController {
 
             if (!empty($password)) {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $db->prepare("UPDATE users SET username = ?, password_hash = ?, is_admin = ? WHERE id = ?");
-                $stmt->execute([$username, $hash, $isAdmin, $userId]);
+                $stmt = $db->prepare("UPDATE users SET username = ?, email = ?, password_hash = ?, is_admin = ? WHERE id = ?");
+                $stmt->execute([$username, $email, $hash, $isAdmin, $userId]);
             } else {
-                $stmt = $db->prepare("UPDATE users SET username = ?, is_admin = ? WHERE id = ?");
-                $stmt->execute([$username, $isAdmin, $userId]);
+                $stmt = $db->prepare("UPDATE users SET username = ?, email = ?, is_admin = ? WHERE id = ?");
+                $stmt->execute([$username, $email, $isAdmin, $userId]);
             }
 
             Logger::log('User Updated', "Updated user ID: $userId");

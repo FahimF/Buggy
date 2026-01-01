@@ -11,6 +11,7 @@
             <tr>
                 <th>ID</th>
                 <th>Username</th>
+                <th>Email</th>
                 <th>Role</th>
                 <th>Created At</th>
                 <th>Actions</th>
@@ -21,6 +22,7 @@
             <tr>
                 <td><?= $u['id'] ?></td>
                 <td><?= htmlspecialchars($u['username']) ?></td>
+                <td><?= htmlspecialchars($u['email'] ?? '') ?></td>
                 <td>
                     <?php if ($u['is_admin']): ?>
                         <span class="badge bg-danger">Admin</span>
@@ -33,6 +35,7 @@
                     <button class="btn btn-sm btn-outline-primary edit-user-btn" 
                             data-id="<?= $u['id'] ?>" 
                             data-username="<?= htmlspecialchars($u['username']) ?>" 
+                            data-email="<?= htmlspecialchars($u['email'] ?? '') ?>"
                             data-is-admin="<?= $u['is_admin'] ?>">
                         <i class="bi bi-pencil"></i>
                     </button>
@@ -65,6 +68,10 @@
                     <div class="mb-3">
                         <label class="form-label">Username</label>
                         <input type="text" name="username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" class="form-control" placeholder="user@example.com">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Password</label>
@@ -100,6 +107,10 @@
                         <input type="text" name="username" id="editUsername" class="form-control" required>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="email" id="editEmail" class="form-control" placeholder="user@example.com">
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Password</label>
                         <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current">
                     </div>
@@ -125,10 +136,12 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.addEventListener('click', function() {
             var id = this.getAttribute('data-id');
             var username = this.getAttribute('data-username');
+            var email = this.getAttribute('data-email');
             var isAdmin = this.getAttribute('data-is-admin') == '1';
             
             document.getElementById('editUserId').value = id;
             document.getElementById('editUsername').value = username;
+            document.getElementById('editEmail').value = email;
             document.getElementById('editIsAdmin').checked = isAdmin;
             
             editModal.show();

@@ -44,7 +44,8 @@ class IssueController {
                ELSE 6 END $dir";
        }
 
-        $sql = "SELECT i.*, u.username as assigned_to_name, c.username as creator_name 
+        $sql = "SELECT i.*, u.username as assigned_to_name, c.username as creator_name,
+                (SELECT COUNT(*) FROM comments WHERE issue_id = i.id) as comment_count
                 FROM issues i 
                 LEFT JOIN users u ON i.assigned_to_id = u.id 
                 JOIN users c ON i.creator_id = c.id

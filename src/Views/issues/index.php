@@ -53,6 +53,7 @@
                         <th><?= sortLink('status', 'Status', $sort, $dir, $hideCompletedParam) ?></th>
                         <th><?= sortLink('assigned_to_name', 'Assigned To', $sort, $dir, $hideCompletedParam) ?></th>
                         <th><?= sortLink('creator_name', 'Author', $sort, $dir, $hideCompletedParam) ?></th>
+                        <th>Comments</th>
                         <th><?= sortLink('created_at', 'Created', $sort, $dir, $hideCompletedParam) ?></th>
                     </tr>
                 </thead>
@@ -115,6 +116,13 @@
                             <?php endif; ?>
                         </td>
                         <td><?= htmlspecialchars($issue['creator_name']) ?></td>
+                        <td>
+                            <?php if ($issue['comment_count'] > 0): ?>
+                                <span class="badge bg-secondary rounded-pill"><?= $issue['comment_count'] ?></span>
+                            <?php else: ?>
+                                <span class="text-muted">-</span>
+                            <?php endif; ?>
+                        </td>
                         <td class="small text-muted"><?= date('M j', strtotime($issue['created_at'])) ?></td>
                     </tr>
                     <?php endforeach; ?>

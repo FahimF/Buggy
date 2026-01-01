@@ -23,6 +23,7 @@ class Database {
             "CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
+                email TEXT,
                 password_hash TEXT NOT NULL,
                 is_admin INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -105,6 +106,12 @@ class Database {
 
         try {
             self::$pdo->exec("ALTER TABLE issues ADD COLUMN priority TEXT DEFAULT 'Medium'");
+        } catch (PDOException $e) {
+            // Column likely already exists
+        }
+
+        try {
+            self::$pdo->exec("ALTER TABLE users ADD COLUMN email TEXT");
         } catch (PDOException $e) {
             // Column likely already exists
         }
