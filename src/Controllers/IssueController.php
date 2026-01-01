@@ -163,8 +163,25 @@ class IssueController {
             $description = $_POST['description'];
             $assignedTo = !empty($_POST['assigned_to']) ? $_POST['assigned_to'] : null;
             $status = $_POST['status'];
-
+            
+            // Check for auto-assign (if user manually changed status but didn't explicitly change assignment, 
+            // or we just override? Requirements say "When the status is changed... value should be set".
+            // Ideally we only override if the user didn't pick a new assignee manually? 
+            // But the form submits the current assignee.
+            // Let's check if status changed.
             $db = Database::connect();
+            $stmt = $db->prepare("SELECT status, assigned_to_id FROM issues WHERE id = ?");
+            $stmt->execute([$id]);
+            $currentIssue = $stmt->fetch();
+            
+            if ($currentIssue && $currentIssue['status'] !== $status) {
+                // Status changed, apply auto-assign logic if applicable
+                $newAssignee = $this->getAutoAssignUser($status);
+                if ($newAssignee) {
+                    $assignedTo = $newAssignee;
+                }
+            }
+
             $stmt = $db->prepare("UPDATE issues SET title = ?, type = ?, priority = ?, description = ?, assigned_to_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmt->execute([$title, $type, $priority, $description, $assignedTo, $status, $id]);
             
@@ -202,8 +219,21 @@ class IssueController {
         $input = json_decode(file_get_contents('php://input'), true);
         if ($input && isset($input['issue_id']) && isset($input['status'])) {
             $db = Database::connect();
-            $stmt = $db->prepare("UPDATE issues SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-            $stmt->execute([$input['status'], $input['issue_id']]);
+            
+            // Auto-assign logic
+            $assignedToUpdate = "";
+            $params = [$input['status']];
+            
+            $newAssignee = $this->getAutoAssignUser($input['status']);
+            if ($newAssignee) {
+                $assignedToUpdate = ", assigned_to_id = ?";
+                $params[] = $newAssignee;
+            }
+            
+            $params[] = $input['issue_id'];
+
+            $stmt = $db->prepare("UPDATE issues SET status = ?, updated_at = CURRENT_TIMESTAMP $assignedToUpdate WHERE id = ?");
+            $stmt->execute($params);
             echo json_encode(['success' => true]);
         }
     }
@@ -224,5 +254,19 @@ class IssueController {
     private function getAllUsers() {
         $db = Database::connect();
         return $db->query("SELECT id, username FROM users ORDER BY username")->fetchAll();
+    }
+
+    private function getAutoAssignUser($status) {
+        $settingKey = null;
+        if ($status === 'Ready for QA') {
+            $settingKey = 'auto_assign_qa';
+        } elseif ($status === 'In Progress') {
+            $settingKey = 'auto_assign_coding';
+        }
+        
+        if ($settingKey) {
+            return Settings::get($settingKey);
+        }
+        return null;
     }
 }

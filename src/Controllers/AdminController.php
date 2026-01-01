@@ -38,6 +38,8 @@ class AdminController {
             exit;
         }
         $settings = Settings::all();
+        $db = Database::connect();
+        $users = $db->query("SELECT id, username FROM users ORDER BY username")->fetchAll();
         $view = 'settings';
         require __DIR__ . '/../Views/admin/layout.php';
     }
