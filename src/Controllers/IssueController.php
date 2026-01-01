@@ -9,10 +9,10 @@ class IssueController {
         return $stmt->fetch();
     }
 
-    private function getIssues($projectId, $orderBy = 'created_at DESC') {
+    private function getIssues($projectId, $orderBy = 'created_at DESC', $hideCompleted = false) {
         $db = Database::connect();
         // Allow safe column names for sorting
-        $allowedSorts = ['created_at', 'updated_at', 'title', 'status', 'type', 'sort_order'];
+        $allowedSorts = ['created_at', 'updated_at', 'title', 'status', 'type', 'sort_order', 'priority'];
         $orderParts = explode(' ', $orderBy);
         $col = $orderParts[0];
         $dir = isset($orderParts[1]) ? $orderParts[1] : 'ASC';
@@ -20,12 +20,26 @@ class IssueController {
         if (!in_array($col, $allowedSorts)) $col = 'created_at';
         if (!in_array(strtoupper($dir), ['ASC', 'DESC'])) $dir = 'DESC';
 
+        $whereClause = "WHERE i.project_id = ?";
+        if ($hideCompleted) {
+             $whereClause .= " AND i.status NOT IN ('Completed', 'WND')";
+        }
+
+        $orderClause = "$col $dir";
+        if ($col === 'priority') {
+             $orderClause = "CASE 
+                WHEN priority = 'High' THEN 1 
+                WHEN priority = 'Medium' THEN 2 
+                WHEN priority = 'Low' THEN 3 
+                ELSE 4 END $dir";
+        }
+
         $sql = "SELECT i.*, u.username as assigned_to_name, c.username as creator_name 
                 FROM issues i 
                 LEFT JOIN users u ON i.assigned_to_id = u.id 
                 JOIN users c ON i.creator_id = c.id
-                WHERE i.project_id = ? 
-                ORDER BY $col $dir";
+                $whereClause 
+                ORDER BY $orderClause";
                 
         $stmt = $db->prepare($sql);
         $stmt->execute([$projectId]);
@@ -39,7 +53,9 @@ class IssueController {
 
         $sort = $_GET['sort'] ?? 'created_at';
         $dir = $_GET['dir'] ?? 'DESC';
-        $issues = $this->getIssues($projectId, "$sort $dir");
+        $hideCompleted = !isset($_GET['hide_completed']) || $_GET['hide_completed'] == '1';
+
+        $issues = $this->getIssues($projectId, "$sort $dir", $hideCompleted);
         
         $users = $this->getAllUsers(); // For assignment in modals if needed
 
@@ -52,7 +68,7 @@ class IssueController {
         if (!$project) die("Project not found");
 
         $issues = $this->getIssues($projectId, 'sort_order ASC');
-        $columns = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', "Won't Do"];
+        $columns = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', "WND"];
         
         // Group by status
         $kanbanData = array_fill_keys($columns, []);
@@ -73,14 +89,15 @@ class IssueController {
             $projectId = $_POST['project_id'];
             $title = $_POST['title'];
             $type = $_POST['type'] ?? 'Bug';
+            $priority = $_POST['priority'] ?? 'Medium';
             $description = $_POST['description']; // HTML from Quill
             $assignedTo = !empty($_POST['assigned_to']) ? $_POST['assigned_to'] : null;
             $status = $_POST['status'] ?? 'Unassigned';
             $creatorId = Auth::user()['id'];
 
             $db = Database::connect();
-            $stmt = $db->prepare("INSERT INTO issues (project_id, title, type, description, creator_id, assigned_to_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->execute([$projectId, $title, $type, $description, $creatorId, $assignedTo, $status]);
+            $stmt = $db->prepare("INSERT INTO issues (project_id, title, type, priority, description, creator_id, assigned_to_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$projectId, $title, $type, $priority, $description, $creatorId, $assignedTo, $status]);
             
             Logger::log('Issue Created', "Issue: $title ($type) in Project ID: $projectId");
             
@@ -142,13 +159,14 @@ class IssueController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $title = $_POST['title'];
             $type = $_POST['type'];
+            $priority = $_POST['priority'];
             $description = $_POST['description'];
             $assignedTo = !empty($_POST['assigned_to']) ? $_POST['assigned_to'] : null;
             $status = $_POST['status'];
 
             $db = Database::connect();
-            $stmt = $db->prepare("UPDATE issues SET title = ?, type = ?, description = ?, assigned_to_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-            $stmt->execute([$title, $type, $description, $assignedTo, $status, $id]);
+            $stmt = $db->prepare("UPDATE issues SET title = ?, type = ?, priority = ?, description = ?, assigned_to_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$title, $type, $priority, $description, $assignedTo, $status, $id]);
             
             // Fetch project ID for redirection
             $stmt = $db->prepare("SELECT project_id FROM issues WHERE id = ?");

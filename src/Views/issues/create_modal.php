@@ -13,24 +13,32 @@
                         <input type="text" name="title" class="form-control" required>
                     </div>
                     <div class="row">
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label>Type</label>
                             <select name="type" id="createIssueType" class="form-select">
                                 <option value="Bug">Bug</option>
                                 <option value="Feature">Feature</option>
                             </select>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-3 mb-3">
+                            <label>Priority</label>
+                            <select name="priority" class="form-select">
+                                <option value="High">High</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
                             <label>Status</label>
                             <select name="status" class="form-select">
                                 <option value="Unassigned">Unassigned</option>
                                 <option value="In Progress">In Progress</option>
                                 <option value="Ready for QA">Ready for QA</option>
                                 <option value="Completed">Completed</option>
-                                <option value="Won't Do">Won't Do</option>
+                                <option value="WND">WND</option>
                             </select>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label>Assign To</label>
                             <select name="assigned_to" class="form-select">
                                 <option value="">-- Unassigned --</option>

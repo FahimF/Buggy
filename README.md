@@ -4,7 +4,7 @@ A simple multi-user, multi-project issue tracker built with native PHP and SQLit
 
 ## Features
 - **Projects**: Create and manage multiple projects.
-- **Kanban Board**: Drag-and-drop issues between status columns (Unassigned, In Progress, QA, Completed, Won't Do).
+- **Kanban Board**: Drag-and-drop issues between status columns (Unassigned, In Progress, QA, Completed, WND).
 - **Issue Tracking**: Create issues with rich text descriptions and image attachments.
 - **Comments**: Discuss issues with comments and attachments.
 - **Sorting**: Custom drag-and-drop sorting in list view.

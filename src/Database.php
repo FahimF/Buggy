@@ -48,6 +48,7 @@ class Database {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 sort_order INTEGER DEFAULT 0,
+                priority TEXT DEFAULT 'Medium',
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
                 FOREIGN KEY (creator_id) REFERENCES users(id),
                 FOREIGN KEY (assigned_to_id) REFERENCES users(id)
@@ -98,6 +99,12 @@ class Database {
 
         try {
             self::$pdo->exec("ALTER TABLE projects ADD COLUMN text_color TEXT DEFAULT '#ffffff'");
+        } catch (PDOException $e) {
+            // Column likely already exists
+        }
+
+        try {
+            self::$pdo->exec("ALTER TABLE issues ADD COLUMN priority TEXT DEFAULT 'Medium'");
         } catch (PDOException $e) {
             // Column likely already exists
         }

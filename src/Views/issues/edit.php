@@ -20,18 +20,26 @@
             </div>
             
             <div class="row">
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
                     <label class="form-label">Type</label>
                     <select name="type" class="form-select">
                         <option value="Bug" <?= ($issue['type'] ?? 'Bug') === 'Bug' ? 'selected' : '' ?>>Bug</option>
                         <option value="Feature" <?= ($issue['type'] ?? 'Bug') === 'Feature' ? 'selected' : '' ?>>Feature</option>
                     </select>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">Priority</label>
+                    <select name="priority" class="form-select">
+                        <option value="High" <?= ($issue['priority'] ?? 'Medium') === 'High' ? 'selected' : '' ?>>High</option>
+                        <option value="Medium" <?= ($issue['priority'] ?? 'Medium') === 'Medium' ? 'selected' : '' ?>>Medium</option>
+                        <option value="Low" <?= ($issue['priority'] ?? 'Medium') === 'Low' ? 'selected' : '' ?>>Low</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select">
                         <?php 
-                        $statuses = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', "Won't Do"];
+                        $statuses = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', "WND"];
                         foreach ($statuses as $status): 
                         ?>
                             <option value="<?= $status ?>" <?= $issue['status'] === $status ? 'selected' : '' ?>>
@@ -40,7 +48,7 @@
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-4 mb-3">
+                <div class="col-md-3 mb-3">
                     <label class="form-label">Assign To</label>
                     <select name="assigned_to" class="form-select">
                         <option value="">-- Unassigned --</option>

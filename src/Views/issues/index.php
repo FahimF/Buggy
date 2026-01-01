@@ -16,14 +16,23 @@
 </div>
 
 <div class="card">
-    <div class="card-header">
+    <div class="card-header d-flex justify-content-between align-items-center">
         <div class="btn-group">
-            <a href="?sort=created_at&dir=DESC" class="btn btn-sm btn-outline-secondary">Newest</a>
-            <a href="?sort=created_at&dir=ASC" class="btn btn-sm btn-outline-secondary">Oldest</a>
-            <a href="?sort=title&dir=ASC" class="btn btn-sm btn-outline-secondary">Title</a>
-            <a href="?sort=status&dir=ASC" class="btn btn-sm btn-outline-secondary">Status</a>
-            <a href="?sort=type&dir=ASC" class="btn btn-sm btn-outline-secondary">Type</a>
-            <a href="?sort=sort_order&dir=ASC" class="btn btn-sm btn-outline-secondary">Custom Order</a>
+            <?php 
+            $baseParams = $_GET;
+            $hideCompletedParam = isset($hideCompleted) && $hideCompleted ? '&hide_completed=1' : '&hide_completed=0';
+            ?>
+            <a href="?sort=created_at&dir=DESC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Newest</a>
+            <a href="?sort=created_at&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Oldest</a>
+            <a href="?sort=priority&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Priority</a>
+            <a href="?sort=title&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Title</a>
+            <a href="?sort=status&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Status</a>
+            <a href="?sort=type&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Type</a>
+            <a href="?sort=sort_order&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Custom Order</a>
+        </div>
+        <div class="form-check form-switch m-0">
+            <input class="form-check-input" type="checkbox" id="hideCompletedCheck" <?= isset($hideCompleted) && $hideCompleted ? 'checked' : '' ?> onchange="window.location.href='?sort=<?= $sort ?>&dir=<?= $dir ?>&hide_completed=' + (this.checked ? '1' : '0')">
+            <label class="form-check-label" for="hideCompletedCheck">Hide Completed</label>
         </div>
     </div>
     <div class="card-body p-0">
@@ -33,6 +42,7 @@
                     <tr>
                         <th style="width: 50px;"></th>
                         <th>Title</th>
+                        <th>Priority</th>
                         <th>Type</th>
                         <th>Status</th>
                         <th>Assigned To</th>
@@ -52,6 +62,15 @@
                             <div class="description-preview">
                                 <?= strip_tags($issue['description']) ?>
                             </div>
+                        </td>
+                        <td>
+                            <?php 
+                            $priorityClass = 'bg-secondary';
+                            if (($issue['priority'] ?? 'Medium') === 'High') $priorityClass = 'bg-danger';
+                            elseif (($issue['priority'] ?? 'Medium') === 'Medium') $priorityClass = 'bg-warning text-dark';
+                            elseif (($issue['priority'] ?? 'Medium') === 'Low') $priorityClass = 'bg-success';
+                            ?>
+                            <span class="badge <?= $priorityClass ?>"><?= htmlspecialchars($issue['priority'] ?? 'Medium') ?></span>
                         </td>
                         <td>
                             <?php if (($issue['type'] ?? 'Bug') === 'Bug'): ?>
