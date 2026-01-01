@@ -46,6 +46,9 @@
                             <a href="/issues/<?= $issue['id'] ?>" class="text-decoration-none fw-bold">
                                 <?= htmlspecialchars($issue['title']) ?>
                             </a>
+                            <div class="description-preview">
+                                <?= strip_tags($issue['description']) ?>
+                            </div>
                         </td>
                         <td>
                             <span class="badge bg-<?= $issue['status'] === 'Completed' ? 'success' : ($issue['status'] === 'In Progress' ? 'primary' : 'secondary') ?>">

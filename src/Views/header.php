@@ -17,6 +17,14 @@
         .kanban-card {
             cursor: move;
         }
+        .description-preview {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body class="bg-light">

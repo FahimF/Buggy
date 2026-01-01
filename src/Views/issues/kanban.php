@@ -30,8 +30,14 @@
                         <h6 class="card-title">
                             <a href="/issues/<?= $issue['id'] ?>" class="text-decoration-none text-dark"><?= htmlspecialchars($issue['title']) ?></a>
                         </h6>
+                        <div class="description-preview">
+                            <?= strip_tags($issue['description']) ?>
+                        </div>
                         <div class="d-flex justify-content-between align-items-center mt-3">
-                            <small class="text-muted">#<?= $issue['id'] ?></small>
+                            <div>
+                                <small class="text-muted me-2">#<?= $issue['id'] ?></small>
+                                <small class="text-muted"><i class="bi bi-calendar3"></i> <?= date('M j', strtotime($issue['created_at'])) ?></small>
+                            </div>
                             <?php if ($issue['assigned_to_name']): ?>
                                 <span class="badge rounded-pill bg-white text-dark border" title="Assigned to <?= htmlspecialchars($issue['assigned_to_name']) ?>">
                                     <?= substr(htmlspecialchars($issue['assigned_to_name']), 0, 1) ?>

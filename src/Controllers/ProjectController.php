@@ -5,9 +5,11 @@ class ProjectController {
         Auth::requireLogin();
         $db = Database::connect();
         
-        // Fetch projects with owner name
+        // Fetch projects with owner name and issue counts
         $stmt = $db->query("
-            SELECT p.*, u.username as owner_name 
+            SELECT p.*, u.username as owner_name,
+                (SELECT COUNT(*) FROM issues WHERE project_id = p.id) as total_issues,
+                (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND status NOT IN ('Completed', 'Won''t Do')) as active_issues
             FROM projects p 
             JOIN users u ON p.owner_id = u.id 
             ORDER BY p.created_at DESC

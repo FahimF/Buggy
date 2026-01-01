@@ -28,6 +28,14 @@
                 </div>
             </div>
             <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="badge bg-light text-dark border">
+                        <i class="bi bi-list-task"></i> Total: <?= $project['total_issues'] ?>
+                    </span>
+                    <span class="badge bg-primary">
+                        <i class="bi bi-exclamation-circle"></i> Active: <?= $project['active_issues'] ?>
+                    </span>
+                </div>
                 <p class="card-text">
                     <small class="text-muted">Owner: <?= htmlspecialchars($project['owner_name']) ?></small><br>
                     <small class="text-muted">Created: <?= date('M j, Y', strtotime($project['created_at'])) ?></small>
