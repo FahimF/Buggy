@@ -21,21 +21,23 @@
             <?php 
             $baseParams = $_GET;
             $hideCompletedParam = isset($hideCompleted) && $hideCompleted ? '&hide_completed=1' : '&hide_completed=0';
+            $myIssuesParam = isset($onlyMyIssues) && $onlyMyIssues ? '&my_issues=1' : '';
             
-            function sortLink($col, $label, $currentSort, $currentDir, $hideCompletedParam) {
+            function sortLink($col, $label, $currentSort, $currentDir, $hideCompletedParam, $myIssuesParam) {
                 $isActive = $currentSort === $col;
                 $newDir = ($isActive && $currentDir === 'ASC') ? 'DESC' : 'ASC';
                 $icon = '';
                 if ($isActive) {
                     $icon = $currentDir === 'ASC' ? ' <i class="bi bi-caret-up-fill"></i>' : ' <i class="bi bi-caret-down-fill"></i>';
                 }
-                return '<a href="?sort=' . $col . '&dir=' . $newDir . $hideCompletedParam . '" class="text-decoration-none text-dark">' . $label . $icon . '</a>';
+                return '<a href="?sort=' . $col . '&dir=' . $newDir . $hideCompletedParam . $myIssuesParam . '" class="text-decoration-none text-dark">' . $label . $icon . '</a>';
             }
             ?>
-            <a href="?sort=sort_order&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Custom Order</a>
+            <a href="?sort=sort_order&dir=ASC<?= $hideCompletedParam . $myIssuesParam ?>" class="btn btn-sm btn-outline-secondary">Custom Order</a>
+            <a href="?sort=<?= $sort ?>&dir=<?= $dir . $hideCompletedParam ?>&my_issues=<?= isset($onlyMyIssues) && $onlyMyIssues ? '0' : '1' ?>" class="btn btn-sm <?= isset($onlyMyIssues) && $onlyMyIssues ? 'btn-primary' : 'btn-outline-primary' ?>">My Issues</a>
         </div>
         <div class="form-check form-switch m-0">
-            <input class="form-check-input" type="checkbox" id="hideCompletedCheck" <?= isset($hideCompleted) && $hideCompleted ? 'checked' : '' ?> onchange="window.location.href='?sort=<?= $sort ?>&dir=<?= $dir ?>&hide_completed=' + (this.checked ? '1' : '0')">
+            <input class="form-check-input" type="checkbox" id="hideCompletedCheck" <?= isset($hideCompleted) && $hideCompleted ? 'checked' : '' ?> onchange="window.location.href='?sort=<?= $sort ?>&dir=<?= $dir ?>&hide_completed=' + (this.checked ? '1' : '0') + '<?= $myIssuesParam ?>'">
             <label class="form-check-label" for="hideCompletedCheck">Hide Completed</label>
         </div>
     </div>
@@ -45,14 +47,14 @@
                 <thead>
                     <tr>
                         <th style="width: 50px;"></th>
-                        <th><?= sortLink('title', 'Title', $sort, $dir, $hideCompletedParam) ?></th>
-                        <th><?= sortLink('priority', 'Priority', $sort, $dir, $hideCompletedParam) ?></th>
-                        <th><?= sortLink('type', 'Type', $sort, $dir, $hideCompletedParam) ?></th>
-                        <th><?= sortLink('status', 'Status', $sort, $dir, $hideCompletedParam) ?></th>
-                        <th><?= sortLink('assigned_to_name', 'Assigned To', $sort, $dir, $hideCompletedParam) ?></th>
-                        <th><?= sortLink('creator_name', 'Author', $sort, $dir, $hideCompletedParam) ?></th>
+                        <th><?= sortLink('title', 'Title', $sort, $dir, $hideCompletedParam, $myIssuesParam) ?></th>
+                        <th><?= sortLink('priority', 'Priority', $sort, $dir, $hideCompletedParam, $myIssuesParam) ?></th>
+                        <th><?= sortLink('type', 'Type', $sort, $dir, $hideCompletedParam, $myIssuesParam) ?></th>
+                        <th><?= sortLink('status', 'Status', $sort, $dir, $hideCompletedParam, $myIssuesParam) ?></th>
+                        <th><?= sortLink('assigned_to_name', 'Assigned To', $sort, $dir, $hideCompletedParam, $myIssuesParam) ?></th>
+                        <th><?= sortLink('creator_name', 'Author', $sort, $dir, $hideCompletedParam, $myIssuesParam) ?></th>
                         <th>Comments</th>
-                        <th><?= sortLink('created_at', 'Created', $sort, $dir, $hideCompletedParam) ?></th>
+                        <th><?= sortLink('created_at', 'Created', $sort, $dir, $hideCompletedParam, $myIssuesParam) ?></th>
                     </tr>
                 </thead>
                 <tbody id="issueList">

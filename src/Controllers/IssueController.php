@@ -9,7 +9,7 @@ class IssueController {
         return $stmt->fetch();
     }
 
-    private function getIssues($projectId, $orderBy = 'created_at DESC', $hideCompleted = false) {
+    private function getIssues($projectId, $orderBy = 'created_at DESC', $hideCompleted = false, $onlyMyIssues = false) {
         $db = Database::connect();
         // Allow safe column names for sorting
         $allowedSorts = ['created_at', 'updated_at', 'title', 'status', 'type', 'sort_order', 'priority', 'assigned_to_name', 'creator_name'];
@@ -21,8 +21,15 @@ class IssueController {
         if (!in_array(strtoupper($dir), ['ASC', 'DESC'])) $dir = 'DESC';
 
         $whereClause = "WHERE i.project_id = ?";
+        $params = [$projectId];
+
         if ($hideCompleted) {
              $whereClause .= " AND i.status NOT IN ('Completed', 'WND')";
+        }
+
+        if ($onlyMyIssues) {
+            $whereClause .= " AND i.assigned_to_id = ?";
+            $params[] = Auth::user()['id'];
         }
 
         $orderClause = "$col $dir";
@@ -53,7 +60,7 @@ class IssueController {
                 ORDER BY $orderClause";
                 
         $stmt = $db->prepare($sql);
-        $stmt->execute([$projectId]);
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
     
@@ -86,9 +93,16 @@ class IssueController {
             $dir = 'DESC';
         }
 
-        $hideCompleted = !isset($_GET['hide_completed']) || $_GET['hide_completed'] == '1';
+        if (isset($_GET['hide_completed'])) {
+            $_SESSION['hide_completed'] = $_GET['hide_completed'];
+        }
+        
+        $hideCompletedVal = $_SESSION['hide_completed'] ?? '1';
+        $hideCompleted = $hideCompletedVal == '1';
 
-        $issues = $this->getIssues($projectId, "$sort $dir", $hideCompleted);
+        $onlyMyIssues = isset($_GET['my_issues']) && $_GET['my_issues'] == '1';
+
+        $issues = $this->getIssues($projectId, "$sort $dir", $hideCompleted, $onlyMyIssues);
         
         $users = $this->getAllUsers(); // For assignment in modals if needed
 
