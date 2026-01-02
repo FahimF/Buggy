@@ -6,7 +6,7 @@
         <span class="badge bg-secondary ms-2">Kanban Board</span>
     </div>
     <div>
-        <a href="/projects/<?= $project['id'] ?>" class="btn btn-outline-secondary me-2">
+        <a href="/projects/<?= $project['id'] ?>?view=list" class="btn btn-outline-secondary me-2">
             <i class="bi bi-list-ul"></i> List View
         </a>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createIssueModal">

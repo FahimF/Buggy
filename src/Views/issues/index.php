@@ -32,8 +32,6 @@
                 return '<a href="?sort=' . $col . '&dir=' . $newDir . $hideCompletedParam . '" class="text-decoration-none text-dark">' . $label . $icon . '</a>';
             }
             ?>
-            <a href="?sort=created_at&dir=DESC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Newest</a>
-            <a href="?sort=created_at&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Oldest</a>
             <a href="?sort=sort_order&dir=ASC<?= $hideCompletedParam ?>" class="btn btn-sm btn-outline-secondary">Custom Order</a>
         </div>
         <div class="form-check form-switch m-0">

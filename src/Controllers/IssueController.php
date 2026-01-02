@@ -62,8 +62,30 @@ class IssueController {
         $project = $this->getProject($projectId);
         if (!$project) die("Project not found");
 
-        $sort = $_GET['sort'] ?? 'created_at';
-        $dir = $_GET['dir'] ?? 'DESC';
+        // Handle View Mode Persistence
+        if (isset($_GET['view']) && $_GET['view'] === 'list') {
+            $_SESSION['issue_view_mode'] = 'list';
+        } elseif (isset($_SESSION['issue_view_mode']) && $_SESSION['issue_view_mode'] === 'kanban') {
+            header("Location: /projects/$projectId/kanban");
+            exit;
+        } else {
+            $_SESSION['issue_view_mode'] = 'list';
+        }
+
+        // Handle Sort Persistence
+        if (isset($_GET['sort'])) {
+            $sort = $_GET['sort'];
+            $dir = $_GET['dir'] ?? 'DESC';
+            $_SESSION['issue_sort'] = $sort;
+            $_SESSION['issue_dir'] = $dir;
+        } elseif (isset($_SESSION['issue_sort'])) {
+            $sort = $_SESSION['issue_sort'];
+            $dir = $_SESSION['issue_dir'] ?? 'DESC';
+        } else {
+            $sort = 'created_at';
+            $dir = 'DESC';
+        }
+
         $hideCompleted = !isset($_GET['hide_completed']) || $_GET['hide_completed'] == '1';
 
         $issues = $this->getIssues($projectId, "$sort $dir", $hideCompleted);
@@ -75,6 +97,10 @@ class IssueController {
 
     public function kanban($projectId) {
         Auth::requireLogin();
+        
+        // Persist Kanban View Mode
+        $_SESSION['issue_view_mode'] = 'kanban';
+
         $project = $this->getProject($projectId);
         if (!$project) die("Project not found");
 

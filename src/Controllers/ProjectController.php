@@ -5,27 +5,53 @@ class ProjectController {
         Auth::requireLogin();
         $db = Database::connect();
         
-        $sort = $_GET['sort'] ?? 'created_at';
+        // Handle sort persistence
+        if (isset($_GET['sort'])) {
+            $sort = $_GET['sort'];
+            $_SESSION['project_sort'] = $sort;
+        } elseif (isset($_SESSION['project_sort'])) {
+            $sort = $_SESSION['project_sort'];
+        } else {
+            $sort = 'created_at';
+        }
+
         $orderBy = 'p.created_at DESC';
         
         if ($sort === 'updated') {
             $orderBy = 'last_activity DESC';
         } elseif ($sort === 'active_issues') {
             $orderBy = 'active_issues DESC';
+        } elseif ($sort === 'my_active_issues') {
+            $orderBy = 'my_active_issues DESC';
         } elseif ($sort === 'name') {
             $orderBy = 'p.name ASC';
         }
 
+        $currentUserId = (int)Auth::user()['id'];
+
+        // Search Logic
+        $whereClause = "";
+        $params = [];
+        if (isset($_GET['q']) && !empty($_GET['q'])) {
+            $whereClause = "WHERE p.name LIKE ?";
+            $params[] = "%" . $_GET['q'] . "%";
+        }
+
         // Fetch projects with owner name and issue counts
-        $stmt = $db->query("
+        $sql = "
             SELECT p.*, u.username as owner_name,
                 (SELECT COUNT(*) FROM issues WHERE project_id = p.id) as total_issues,
                 (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND status NOT IN ('Completed', 'WND')) as active_issues,
+                (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND assigned_to_id = $currentUserId AND status NOT IN ('Completed', 'WND')) as my_active_issues,
                 COALESCE((SELECT MAX(updated_at) FROM issues WHERE project_id = p.id), p.created_at) as last_activity
             FROM projects p 
             JOIN users u ON p.owner_id = u.id 
+            $whereClause
             ORDER BY $orderBy
-        ");
+        ";
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
         $projects = $stmt->fetchAll();
         
         // Fetch users for the modal

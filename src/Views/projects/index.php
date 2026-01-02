@@ -2,16 +2,24 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Projects</h1>
-    <div>
+    <div class="d-flex gap-2">
+        <form action="/" method="get" class="d-flex gap-2">
+            <input type="text" name="q" class="form-control" placeholder="Search projects..." value="<?= htmlspecialchars($_GET['q'] ?? '') ?>">
+            <?php if (isset($_GET['sort'])): ?>
+                <input type="hidden" name="sort" value="<?= htmlspecialchars($_GET['sort']) ?>">
+            <?php endif; ?>
+            <button type="submit" class="btn btn-outline-secondary">Search</button>
+        </form>
         <div class="btn-group me-2">
             <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
                 <i class="bi bi-sort-down"></i> Sort
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
-                <li><a class="dropdown-item" href="?sort=created_at">Newest First</a></li>
-                <li><a class="dropdown-item" href="?sort=updated">Last Updated</a></li>
-                <li><a class="dropdown-item" href="?sort=active_issues">Most Active Issues</a></li>
-                <li><a class="dropdown-item" href="?sort=name">Name (A-Z)</a></li>
+                <li><a class="dropdown-item <?= $sort === 'created_at' ? 'active' : '' ?>" href="?sort=created_at">Newest First</a></li>
+                <li><a class="dropdown-item <?= $sort === 'updated' ? 'active' : '' ?>" href="?sort=updated">Last Updated</a></li>
+                <li><a class="dropdown-item <?= $sort === 'active_issues' ? 'active' : '' ?>" href="?sort=active_issues">Most Active Issues</a></li>
+                <li><a class="dropdown-item <?= $sort === 'my_active_issues' ? 'active' : '' ?>" href="?sort=my_active_issues">My Active Issues</a></li>
+                <li><a class="dropdown-item <?= $sort === 'name' ? 'active' : '' ?>" href="?sort=name">Name (A-Z)</a></li>
             </ul>
         </div>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createProjectModal">
