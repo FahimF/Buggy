@@ -58,29 +58,9 @@
                         <?php endif; ?>
                     </div>
                 </div>
-                <div class="mt-2">
-                    <?= nl2br(htmlspecialchars($comment['comment'])) ?>
+                <div class="mt-2 ql-editor" style="padding: 0;">
+                    <?= $comment['comment'] ?>
                 </div>
-                
-                <!-- Attachments for comment -->
-                <?php
-                    $db = Database::connect();
-                    $stmtAtt = $db->prepare("SELECT * FROM attachments WHERE parent_type = 'comment' AND parent_id = ?");
-                    $stmtAtt->execute([$comment['id']]);
-                    $attachments = $stmtAtt->fetchAll();
-                ?>
-                <?php if ($attachments): ?>
-                <div class="mt-3">
-                    <strong>Attachments:</strong>
-                    <div class="d-flex flex-wrap gap-2">
-                    <?php foreach ($attachments as $att): ?>
-                        <a href="/uploads/<?= $att['file_path'] ?>" target="_blank">
-                            <img src="/uploads/<?= $att['file_path'] ?>" class="img-thumbnail" style="height: 100px;">
-                        </a>
-                    <?php endforeach; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
             </div>
         </div>
         <?php endforeach; ?>
@@ -88,14 +68,11 @@
         <div class="card">
             <div class="card-header">Add Comment</div>
             <div class="card-body">
-                <form action="/comments/create" method="post" enctype="multipart/form-data">
+                <form action="/comments/create" method="post" id="addCommentForm">
                     <input type="hidden" name="issue_id" value="<?= $issue['id'] ?>">
                     <div class="mb-3">
-                        <textarea name="comment" class="form-control" rows="3" required placeholder="Write a comment..."></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Attachments (Images)</label>
-                        <input type="file" name="attachments[]" class="form-control" multiple accept="image/*">
+                        <div id="comment-editor" style="height: 150px;"></div>
+                        <input type="hidden" name="comment" id="commentInput">
                     </div>
                     <button type="submit" class="btn btn-primary">Post Comment</button>
                 </form>
@@ -141,5 +118,33 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var quill = new Quill('#comment-editor', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['image']
+                ]
+            },
+            placeholder: 'Write a comment...'
+        });
+
+        document.getElementById('addCommentForm').onsubmit = function() {
+            var html = quill.root.innerHTML;
+            if (quill.getText().trim().length === 0 && !html.includes('<img')) {
+                // Prevent empty submission if strictly empty
+                // But allowing image-only comments
+                alert('Please write a comment.');
+                return false;
+            }
+            document.getElementById('commentInput').value = html;
+        };
+    });
+</script>
 
 <?php require __DIR__ . '/../footer.php'; ?>

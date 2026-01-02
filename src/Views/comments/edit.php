@@ -13,9 +13,10 @@
         <div class="card">
             <div class="card-header">Edit Comment</div>
             <div class="card-body">
-                <form action="/comments/<?= $comment['id'] ?>/update" method="post">
+                <form action="/comments/<?= $comment['id'] ?>/update" method="post" id="editCommentForm">
                     <div class="mb-3">
-                        <textarea name="comment" class="form-control" rows="5" required><?= htmlspecialchars($comment['comment']) ?></textarea>
+                        <div id="editor-container" style="height: 300px;"><?= $comment['comment'] ?></div>
+                        <input type="hidden" name="comment" id="commentInput">
                     </div>
                     <button type="submit" class="btn btn-primary">Update Comment</button>
                     <a href="/issues/<?= $comment['issue_id'] ?>" class="btn btn-secondary">Cancel</a>
@@ -24,5 +25,25 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var quill = new Quill('#editor-container', {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    ['bold', 'italic', 'underline', 'strike'],
+                    ['blockquote', 'code-block'],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['image']
+                ]
+            }
+        });
+        
+        document.getElementById('editCommentForm').onsubmit = function() {
+            document.getElementById('commentInput').value = quill.root.innerHTML;
+        };
+    });
+</script>
 
 <?php require __DIR__ . '/../footer.php'; ?>
