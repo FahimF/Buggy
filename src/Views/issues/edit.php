@@ -75,6 +75,49 @@
     </div>
 </div>
 
+<div class="mt-4">
+    <div class="d-flex align-items-center mb-3">
+        <h4 class="mb-0">Comments</h4>
+        <span class="badge bg-secondary ms-2"><?= count($comments) ?></span>
+    </div>
+
+    <?php foreach ($comments as $comment): ?>
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <strong><?= htmlspecialchars($comment['username']) ?></strong>
+                <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted"><?= date('M j, Y H:i', strtotime($comment['created_at'])) ?></small>
+                </div>
+            </div>
+            <div class="mt-2">
+                <?= nl2br(htmlspecialchars($comment['comment'])) ?>
+            </div>
+            
+            <!-- Attachments for comment -->
+            <?php
+                $db = Database::connect();
+                $stmtAtt = $db->prepare("SELECT * FROM attachments WHERE parent_type = 'comment' AND parent_id = ?");
+                $stmtAtt->execute([$comment['id']]);
+                $attachments = $stmtAtt->fetchAll();
+            ?>
+            <?php if ($attachments): ?>
+            <div class="mt-3">
+                <strong>Attachments:</strong>
+                <div class="d-flex flex-wrap gap-2">
+                <?php foreach ($attachments as $att): ?>
+                    <a href="/uploads/<?= $att['file_path'] ?>" target="_blank">
+                        <img src="/uploads/<?= $att['file_path'] ?>" class="img-thumbnail" style="height: 100px;">
+                    </a>
+                <?php endforeach; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endforeach; ?>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var quill = new Quill('#editor-container', {

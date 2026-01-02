@@ -202,6 +202,17 @@ class IssueController {
         $project = $this->getProject($issue['project_id']);
         $users = $this->getAllUsers();
 
+        // Get Comments
+        $stmt = $db->prepare("
+            SELECT c.*, u.username 
+            FROM comments c 
+            JOIN users u ON c.user_id = u.id 
+            WHERE c.issue_id = ? 
+            ORDER BY c.created_at ASC
+        ");
+        $stmt->execute([$id]);
+        $comments = $stmt->fetchAll();
+
         require __DIR__ . '/../Views/issues/edit.php';
     }
 
