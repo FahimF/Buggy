@@ -28,6 +28,15 @@ class AdminController {
         require __DIR__ . '/../Views/admin/layout.php';
     }
 
+    public function clearLogs() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $db = Database::connect();
+            $db->exec("DELETE FROM logs");
+            Logger::log('Logs Cleared', 'Admin cleared all system logs');
+            header('Location: /admin/logs');
+        }
+    }
+
     public function settings() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($_POST['settings'] as $key => $value) {

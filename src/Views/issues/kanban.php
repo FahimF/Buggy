@@ -2,7 +2,12 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h1 class="d-inline"><?= htmlspecialchars($project['name']) ?></h1>
+        <?php 
+        $totalIssues = array_reduce($kanbanData, function($carry, $column) {
+            return $carry + count($column);
+        }, 0);
+        ?>
+        <h1 class="d-inline"><?= htmlspecialchars($project['name']) ?> (<?= $totalIssues ?>)</h1>
         <span class="badge bg-secondary ms-2">Kanban Board</span>
     </div>
     <div>

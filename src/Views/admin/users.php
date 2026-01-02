@@ -1,5 +1,5 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h3>User Management</h3>
+    <h3>User Management (<?= count($users) ?>)</h3>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createUserModal">
         <i class="bi bi-person-plus"></i> Create User
     </button>

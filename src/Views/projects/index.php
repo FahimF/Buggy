@@ -1,14 +1,21 @@
 <?php require __DIR__ . '/../header.php'; ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Projects</h1>
+    <h1>Projects (<?= count($projects) ?>)</h1>
     <div class="d-flex gap-2">
         <form action="/" method="get" class="d-flex gap-2">
-            <input type="text" name="q" class="form-control" placeholder="Search projects..." value="<?= htmlspecialchars($_GET['q'] ?? '') ?>">
+            <div class="input-group">
+                <input type="text" name="q" class="form-control" placeholder="Search projects..." value="<?= htmlspecialchars($_GET['q'] ?? '') ?>">
+                <?php if (isset($_GET['q']) && $_GET['q'] !== ''): ?>
+                    <a href="/" class="btn btn-outline-secondary" title="Clear Search">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                <?php endif; ?>
+                <button type="submit" class="btn btn-outline-secondary">Search</button>
+            </div>
             <?php if (isset($_GET['sort'])): ?>
                 <input type="hidden" name="sort" value="<?= htmlspecialchars($_GET['sort']) ?>">
             <?php endif; ?>
-            <button type="submit" class="btn btn-outline-secondary">Search</button>
         </form>
         <div class="btn-group me-2">
             <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">

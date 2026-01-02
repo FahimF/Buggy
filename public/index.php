@@ -73,6 +73,8 @@ if ($uri === '/' || $uri === '/index.php') {
     (new AdminController())->updateUser();
 } elseif ($uri === '/admin/users/delete') {
     (new AdminController())->deleteUser();
+} elseif ($uri === '/admin/logs/clear') {
+    (new AdminController())->clearLogs();
 } elseif ($uri === '/admin/logs') {
     (new AdminController())->logs();
 } elseif ($uri === '/admin/settings') {
