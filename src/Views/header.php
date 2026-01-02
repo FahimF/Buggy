@@ -38,6 +38,13 @@
         .ql-editor h4 { font-size: 1em; }
         .ql-editor h5 { font-size: 0.83em; }
         .ql-editor h6 { font-size: 0.67em; }
+        
+        /* Image sizing fix and pointer for lightbox */
+        .card-text img, .ql-editor img {
+            max-width: 100%;
+            height: auto;
+            cursor: pointer;
+        }
     </style>
 </head>
 <?php
