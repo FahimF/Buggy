@@ -63,6 +63,12 @@ if ($uri === '/' || $uri === '/index.php') {
     (new IssueController())->delete($matches[1]);
 } elseif ($uri === '/comments/create') {
     (new CommentController())->create();
+} elseif (preg_match('#^/comments/(\d+)/edit$#', $uri, $matches)) {
+    (new CommentController())->edit($matches[1]);
+} elseif (preg_match('#^/comments/(\d+)/update$#', $uri, $matches)) {
+    (new CommentController())->update($matches[1]);
+} elseif (preg_match('#^/comments/(\d+)/delete$#', $uri, $matches)) {
+    (new CommentController())->delete($matches[1]);
 } elseif ($uri === '/admin' || $uri === '/admin/users') {
     (new AdminController())->users();
 } elseif ($uri === '/admin/users/toggle_admin') {

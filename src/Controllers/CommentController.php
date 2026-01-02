@@ -128,4 +128,92 @@ class CommentController {
             Logger::log('Email Error', "Failed to init SMTP or send notifications: " . $e->getMessage());
         }
     }
+
+    public function edit($id) {
+        Auth::requireLogin();
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT * FROM comments WHERE id = ?");
+        $stmt->execute([$id]);
+        $comment = $stmt->fetch();
+
+        if (!$comment) {
+            http_response_code(404);
+            echo "Comment not found";
+            return;
+        }
+
+        if (Auth::user()['id'] != $comment['user_id']) {
+            http_response_code(403);
+            echo "Unauthorized";
+            return;
+        }
+
+        require __DIR__ . '/../Views/comments/edit.php';
+    }
+
+    public function update($id) {
+        Auth::requireLogin();
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT * FROM comments WHERE id = ?");
+        $stmt->execute([$id]);
+        $comment = $stmt->fetch();
+
+        if (!$comment) {
+            http_response_code(404);
+            echo "Comment not found";
+            return;
+        }
+
+        if (Auth::user()['id'] != $comment['user_id']) {
+            http_response_code(403);
+            echo "Unauthorized";
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $newComment = $_POST['comment'];
+            $stmt = $db->prepare("UPDATE comments SET comment = ? WHERE id = ?");
+            $stmt->execute([$newComment, $id]);
+            header("Location: /issues/" . $comment['issue_id']);
+        }
+    }
+
+    public function delete($id) {
+        Auth::requireLogin();
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT * FROM comments WHERE id = ?");
+        $stmt->execute([$id]);
+        $comment = $stmt->fetch();
+
+        if (!$comment) {
+            http_response_code(404);
+            echo "Comment not found";
+            return;
+        }
+
+        $user = Auth::user();
+        if ($user['id'] != $comment['user_id'] && !$user['is_admin']) {
+            http_response_code(403);
+            echo "Unauthorized";
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // Delete attachments
+            $stmtAtt = $db->prepare("SELECT file_path FROM attachments WHERE parent_type = 'comment' AND parent_id = ?");
+            $stmtAtt->execute([$id]);
+            while ($row = $stmtAtt->fetch()) {
+                $filePath = __DIR__ . "/../../public/uploads/" . $row['file_path'];
+                if (file_exists($filePath)) {
+                    unlink($filePath);
+                }
+            }
+            $stmtDelAtt = $db->prepare("DELETE FROM attachments WHERE parent_type = 'comment' AND parent_id = ?");
+            $stmtDelAtt->execute([$id]);
+
+            $stmt = $db->prepare("DELETE FROM comments WHERE id = ?");
+            $stmt->execute([$id]);
+            header("Location: /issues/" . $comment['issue_id']);
+        }
+    }
 }

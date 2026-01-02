@@ -35,13 +35,28 @@
             </div>
         </div>
 
-        <h4>Comments</h4>
+        <div class="d-flex align-items-center mb-3">
+            <h4 class="mb-0">Comments</h4>
+            <span class="badge bg-secondary ms-2"><?= count($comments) ?></span>
+        </div>
+        
         <?php foreach ($comments as $comment): ?>
         <div class="card mb-3">
             <div class="card-body">
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between align-items-center">
                     <strong><?= htmlspecialchars($comment['username']) ?></strong>
-                    <small class="text-muted"><?= date('M j, Y H:i', strtotime($comment['created_at'])) ?></small>
+                    <div class="d-flex align-items-center gap-2">
+                        <small class="text-muted"><?= date('M j, Y H:i', strtotime($comment['created_at'])) ?></small>
+                        <?php $currentUser = Auth::user(); ?>
+                        <?php if ($currentUser && $currentUser['id'] == $comment['user_id']): ?>
+                            <a href="/comments/<?= $comment['id'] ?>/edit" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <?php endif; ?>
+                        <?php if ($currentUser && ($currentUser['id'] == $comment['user_id'] || $currentUser['is_admin'])): ?>
+                            <form action="/comments/<?= $comment['id'] ?>/delete" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this comment?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
                 </div>
                 <div class="mt-2">
                     <?= nl2br(htmlspecialchars($comment['comment'])) ?>
