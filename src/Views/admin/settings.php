@@ -32,10 +32,30 @@
             <input type="checkbox" class="form-check-input" name="settings[enable_email]" value="1" id="enableEmail" <?= ($settings['enable_email'] ?? '0') == '1' ? 'checked' : '' ?>>
             <label class="form-check-label" for="enableEmail">Enable Email Notifications</label>
         </div>
+        
+        <div class="ms-4 mt-2" id="emailSubOptions" style="<?= ($settings['enable_email'] ?? '0') == '1' ? '' : 'display: none;' ?>">
+            <div class="form-check">
+                <input type="hidden" name="settings[send_email_comment]" value="0">
+                <input type="checkbox" class="form-check-input" name="settings[send_email_comment]" value="1" id="sendEmailComment" <?= ($settings['send_email_comment'] ?? '1') == '1' ? 'checked' : '' ?>>
+                <label class="form-check-label" for="sendEmailComment">Send notification on comment</label>
+            </div>
+            <div class="form-check">
+                <input type="hidden" name="settings[send_email_assign]" value="0">
+                <input type="checkbox" class="form-check-input" name="settings[send_email_assign]" value="1" id="sendEmailAssign" <?= ($settings['send_email_assign'] ?? '0') == '1' ? 'checked' : '' ?>>
+                <label class="form-check-label" for="sendEmailAssign">Send notification on assign</label>
+            </div>
+        </div>
+
         <div class="form-text">
-            When checked, emails will be sent out for any relevant users when new comments are posted.
+            When checked, emails will be sent out based on the selected events.
         </div>
     </div>
+
+    <script>
+        document.getElementById('enableEmail').addEventListener('change', function() {
+            document.getElementById('emailSubOptions').style.display = this.checked ? 'block' : 'none';
+        });
+    </script>
 
     <div class="card card-body bg-light mb-3">
         <h5>SMTP Configuration</h5>

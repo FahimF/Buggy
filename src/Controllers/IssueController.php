@@ -150,10 +150,20 @@ class IssueController {
             $stmt = $db->prepare("INSERT INTO issues (project_id, title, type, priority, description, creator_id, assigned_to_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([$projectId, $title, $type, $priority, $description, $creatorId, $assignedTo, $status]);
             
+            $issueId = $db->lastInsertId();
             Logger::log('Issue Created', "Issue: $title ($type) in Project ID: $projectId");
             
             // Handle attachments if any (simplification: assume handled separately or simple file upload)
             
+            // Notification
+            if ($assignedTo) {
+                try {
+                    (new NotificationService())->sendAssignmentNotification($issueId, $assignedTo, $creatorId);
+                } catch (Exception $e) {
+                    Logger::log('Notification Error', $e->getMessage());
+                }
+            }
+
             header("Location: /projects/$projectId");
         }
     }
@@ -247,6 +257,15 @@ class IssueController {
             $stmt = $db->prepare("UPDATE issues SET title = ?, type = ?, priority = ?, description = ?, assigned_to_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmt->execute([$title, $type, $priority, $description, $assignedTo, $status, $id]);
             
+            // Notification
+            if ($assignedTo && $assignedTo != $currentIssue['assigned_to_id']) {
+                try {
+                    (new NotificationService())->sendAssignmentNotification($id, $assignedTo, Auth::user()['id']);
+                } catch (Exception $e) {
+                    Logger::log('Notification Error', $e->getMessage());
+                }
+            }
+
             // Fetch project ID for redirection
             $stmt = $db->prepare("SELECT project_id FROM issues WHERE id = ?");
             $stmt->execute([$id]);
@@ -296,6 +315,15 @@ class IssueController {
 
             $stmt = $db->prepare("UPDATE issues SET status = ?, updated_at = CURRENT_TIMESTAMP $assignedToUpdate WHERE id = ?");
             $stmt->execute($params);
+
+            if ($newAssignee) {
+                try {
+                    (new NotificationService())->sendAssignmentNotification($input['issue_id'], $newAssignee, Auth::user()['id']);
+                } catch (Exception $e) {
+                    Logger::log('Notification Error', $e->getMessage());
+                }
+            }
+
             echo json_encode(['success' => true]);
         }
     }
