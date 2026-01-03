@@ -46,7 +46,7 @@ function processCommentNotification($db, $host, $data) {
     $currentUserId = $data['user_id'];
 
     // Get Issue Details
-    $stmt = $db->prepare("SELECT title, creator_id FROM issues WHERE id = ?");
+    $stmt = $db->prepare("SELECT i.title, i.creator_id, p.name as project_name FROM issues i JOIN projects p ON i.project_id = p.id WHERE i.id = ?");
     $stmt->execute([$issueId]);
     $issue = $stmt->fetch();
     if (!$issue) return;
@@ -93,8 +93,8 @@ function processCommentNotification($db, $host, $data) {
 
     if (empty($emails)) return;
 
-    $subject = "New Comment on Issue: " . $issue['title'];
-    $message = "A new comment was posted on issue: " . $issue['title'] . "\n\n" .
+    $subject = "[" . $issue['project_name'] . "] " . "New Comment on Issue: " . $issue['title'];
+    $message = "A new comment was posted on issue: " . $issue['title'] . "\nProject: " . $issue['project_name'] . "\n\n" .
                "Comment:\n" . $comment . "\n\n" .
                "View Issue: http://" . $host . "/issues/$issueId";
 
@@ -107,7 +107,7 @@ function processAssignmentNotification($db, $host, $data) {
     $assignerId = $data['assigner_id'];
 
     // Get Issue
-    $stmt = $db->prepare("SELECT title FROM issues WHERE id = ?");
+    $stmt = $db->prepare("SELECT i.title, p.name as project_name FROM issues i JOIN projects p ON i.project_id = p.id WHERE i.id = ?");
     $stmt->execute([$issueId]);
     $issue = $stmt->fetch();
     if (!$issue) return;
@@ -125,8 +125,8 @@ function processAssignmentNotification($db, $host, $data) {
     $assigner = $stmt->fetch();
     $assignerName = $assigner ? $assigner['username'] : 'System';
 
-    $subject = "Assigned to Issue: " . $issue['title'];
-    $message = "You have been assigned to issue: " . $issue['title'] . " by $assignerName.\n\n" .
+    $subject = "[" . $issue['project_name'] . "] " . "Assigned to Issue: " . $issue['title'];
+    $message = "You have been assigned to issue: " . $issue['title'] . "\nProject: " . $issue['project_name'] . "\nAssigner: $assignerName.\n\n" .
                "View Issue: http://" . $host . "/issues/$issueId";
 
     sendEmails([$user['email']], $subject, $message);

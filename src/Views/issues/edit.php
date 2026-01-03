@@ -88,10 +88,19 @@
                 <strong><?= htmlspecialchars($comment['username']) ?></strong>
                 <div class="d-flex align-items-center gap-2">
                     <small class="text-muted"><?= date('M j, Y H:i', strtotime($comment['created_at'])) ?></small>
+                    <?php $currentUser = Auth::user(); ?>
+                    <?php if ($currentUser && $currentUser['id'] == $comment['user_id']): ?>
+                        <a href="/comments/<?= $comment['id'] ?>/edit" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Edit"><i class="bi bi-pencil"></i></a>
+                    <?php endif; ?>
+                    <?php if ($currentUser && ($currentUser['id'] == $comment['user_id'] || $currentUser['is_admin'])): ?>
+                        <form action="/comments/<?= $comment['id'] ?>/delete" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this comment?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                        </form>
+                    <?php endif; ?>
                 </div>
             </div>
-            <div class="mt-2">
-                <?= nl2br(htmlspecialchars($comment['comment'])) ?>
+            <div class="mt-2 ql-editor" style="padding: 0;">
+                <?= $comment['comment'] ?>
             </div>
             
             <!-- Attachments for comment -->
