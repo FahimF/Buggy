@@ -14,6 +14,7 @@
     </div>
     <div class="card-body">
         <form action="/issues/<?= $issue['id'] ?>/update" method="post" id="editIssueForm">
+            <input type="hidden" name="referrer" value="<?= $_SERVER['HTTP_REFERER'] ?? '' ?>">
             <div class="mb-3">
                 <label class="form-label">Title</label>
                 <input type="text" name="title" class="form-control" value="<?= htmlspecialchars($issue['title']) ?>" required>
@@ -67,8 +68,12 @@
                 <input type="hidden" name="description" id="descriptionInput">
             </div>
 
+            <?php
+            $referrer = $_SERVER['HTTP_REFERER'] ?? '';
+            $backLink = strpos($referrer, '/dashboard') !== false ? '/dashboard' : '/projects/' . $project['id'];
+            ?>
             <div class="d-flex justify-content-between">
-                <a href="/projects/<?= $project['id'] ?>" class="btn btn-secondary">Cancel</a>
+                <a href="<?= $backLink ?>" class="btn btn-secondary">Cancel</a>
                 <button type="submit" class="btn btn-primary">Update Issue</button>
             </div>
         </form>

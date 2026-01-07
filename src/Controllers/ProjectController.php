@@ -6,6 +6,9 @@ class ProjectController {
         $db = Database::connect();
         $currentUserId = (int)Auth::user()['id'];
 
+        // Get the group_by parameter from the request
+        $groupBy = $_GET['group_by'] ?? 'project';
+
         // Fetch issues assigned to the current user with project name and comment count
         $sql = "
             SELECT i.*, p.name as project_name, u.username as assigned_to_name, c.username as creator_name,
@@ -20,9 +23,117 @@ class ProjectController {
 
         $stmt = $db->prepare($sql);
         $stmt->execute([$currentUserId]);
-        $issues = $stmt->fetchAll();
+        $allIssues = $stmt->fetchAll();
+
+        // Group the issues based on the selected option
+        $groupedIssues = $this->groupIssues($allIssues, $groupBy);
 
         require __DIR__ . '/../Views/projects/dashboard.php';
+    }
+
+    private function groupIssues($issues, $groupBy) {
+        $grouped = [];
+
+        switch ($groupBy) {
+            case 'project':
+                // Group by project and count occurrences
+                foreach ($issues as $issue) {
+                    $projectName = $issue['project_name'];
+                    if (!isset($grouped[$projectName])) {
+                        $grouped[$projectName] = [];
+                    }
+                    $grouped[$projectName][] = $issue;
+                }
+
+                // Sort by count (highest first)
+                uasort($grouped, function($a, $b) {
+                    return count($b) - count($a);
+                });
+                break;
+
+            case 'priority':
+                // Group by priority and count occurrences
+                foreach ($issues as $issue) {
+                    $priority = $issue['priority'];
+                    if (!isset($grouped[$priority])) {
+                        $grouped[$priority] = [];
+                    }
+                    $grouped[$priority][] = $issue;
+                }
+
+                // Define priority order for sorting
+                $priorityOrder = ['High' => 3, 'Medium' => 2, 'Low' => 1];
+
+                // Sort by count (highest first)
+                uasort($grouped, function($a, $b) use ($priorityOrder) {
+                    $countA = count($a);
+                    $countB = count($b);
+                    if ($countA === $countB) {
+                        // If counts are equal, sort by priority level
+                        $priorityA = $a[0]['priority'];
+                        $priorityB = $b[0]['priority'];
+                        return ($priorityOrder[$priorityB] ?? 0) - ($priorityOrder[$priorityA] ?? 0);
+                    }
+                    return $countB - $countA;
+                });
+                break;
+
+            case 'type':
+                // Group by type
+                foreach ($issues as $issue) {
+                    $type = $issue['type'];
+                    if (!isset($grouped[$type])) {
+                        $grouped[$type] = [];
+                    }
+                    $grouped[$type][] = $issue;
+                }
+
+                // Sort by type: Bugs first, then Features, then others
+                $typeOrder = ['Bug' => 3, 'Feature' => 2, 'Task' => 1, 'Improvement' => 0];
+
+                uasort($grouped, function($a, $b) use ($typeOrder) {
+                    $typeA = $a[0]['type'];
+                    $typeB = $b[0]['type'];
+                    $orderA = $typeOrder[$typeA] ?? -1;
+                    $orderB = $typeOrder[$typeB] ?? -1;
+                    return $orderB - $orderA;
+                });
+                break;
+
+            case 'status':
+                // Group by status and count occurrences
+                foreach ($issues as $issue) {
+                    $status = $issue['status'];
+                    if (!isset($grouped[$status])) {
+                        $grouped[$status] = [];
+                    }
+                    $grouped[$status][] = $issue;
+                }
+
+                // Sort by count (highest first)
+                uasort($grouped, function($a, $b) {
+                    return count($b) - count($a);
+                });
+                break;
+
+            default:
+                // Default to project grouping
+                foreach ($issues as $issue) {
+                    $projectName = $issue['project_name'];
+                    if (!isset($grouped[$projectName])) {
+                        $grouped[$projectName] = [];
+                    }
+                    $grouped[$projectName][] = $issue;
+                }
+
+                // Sort by count (highest first)
+                uasort($grouped, function($a, $b) {
+                    return count($b) - count($a);
+                });
+                break;
+        }
+
+        return $grouped;
     }
 
     public function index() {

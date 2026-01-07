@@ -235,17 +235,17 @@ class IssueController {
             $description = $_POST['description'];
             $assignedTo = !empty($_POST['assigned_to']) ? $_POST['assigned_to'] : null;
             $status = $_POST['status'];
-            
-            // Check for auto-assign (if user manually changed status but didn't explicitly change assignment, 
+
+            // Check for auto-assign (if user manually changed status but didn't explicitly change assignment,
             // or we just override? Requirements say "When the status is changed... value should be set".
-            // Ideally we only override if the user didn't pick a new assignee manually? 
+            // Ideally we only override if the user didn't pick a new assignee manually?
             // But the form submits the current assignee.
             // Let's check if status changed.
             $db = Database::connect();
             $stmt = $db->prepare("SELECT status, assigned_to_id FROM issues WHERE id = ?");
             $stmt->execute([$id]);
             $currentIssue = $stmt->fetch();
-            
+
             if ($currentIssue && $currentIssue['status'] !== $status) {
                 // Status changed, apply auto-assign logic if applicable
                 $newAssignee = $this->getAutoAssignUser($status);
@@ -256,7 +256,7 @@ class IssueController {
 
             $stmt = $db->prepare("UPDATE issues SET title = ?, type = ?, priority = ?, description = ?, assigned_to_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
             $stmt->execute([$title, $type, $priority, $description, $assignedTo, $status, $id]);
-            
+
             // Notification
             if ($assignedTo && $assignedTo != $currentIssue['assigned_to_id']) {
                 try {
@@ -266,12 +266,18 @@ class IssueController {
                 }
             }
 
-            // Fetch project ID for redirection
-            $stmt = $db->prepare("SELECT project_id FROM issues WHERE id = ?");
-            $stmt->execute([$id]);
-            $issue = $stmt->fetch();
+            // Check if the user came from the dashboard to determine redirect location
+            $referrer = $_POST['referrer'] ?? $_SERVER['HTTP_REFERER'] ?? '';
+            if (strpos($referrer, '/dashboard') !== false) {
+                header("Location: /dashboard");
+            } else {
+                // Fetch project ID for redirection to project page
+                $stmt = $db->prepare("SELECT project_id FROM issues WHERE id = ?");
+                $stmt->execute([$id]);
+                $issue = $stmt->fetch();
 
-            header("Location: /projects/" . $issue['project_id']);
+                header("Location: /projects/" . $issue['project_id']);
+            }
         }
     }
 
