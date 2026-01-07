@@ -150,20 +150,20 @@ class ProjectController {
             $sort = 'created_at';
         }
 
+        $currentUserId = (int)Auth::user()['id'];
+
         // For pinned projects, they should always appear at the top regardless of sort order
-        $orderBy = 'p.pinned DESC, p.created_at DESC';
+        $orderBy = 'COALESCE(up.is_pinned, 0) DESC, p.created_at DESC';
 
         if ($sort === 'updated') {
-            $orderBy = 'p.pinned DESC, last_activity DESC';
+            $orderBy = 'COALESCE(up.is_pinned, 0) DESC, last_activity DESC';
         } elseif ($sort === 'active_issues') {
-            $orderBy = 'p.pinned DESC, active_issues DESC';
+            $orderBy = 'COALESCE(up.is_pinned, 0) DESC, active_issues DESC';
         } elseif ($sort === 'my_active_issues') {
-            $orderBy = 'p.pinned DESC, my_active_issues DESC';
+            $orderBy = 'COALESCE(up.is_pinned, 0) DESC, my_active_issues DESC';
         } elseif ($sort === 'name') {
-            $orderBy = 'p.pinned DESC, p.name ASC';
+            $orderBy = 'COALESCE(up.is_pinned, 0) DESC, p.name ASC';
         }
-
-        $currentUserId = (int)Auth::user()['id'];
 
         // Search Logic
         $whereClause = "";
@@ -173,20 +173,23 @@ class ProjectController {
             $params[] = "%" . $_GET['q'] . "%";
         }
 
-        // Fetch projects with owner name and issue counts
+        // Fetch projects with owner name, issue counts, and user-specific pinned status
         $sql = "
             SELECT p.*, u.username as owner_name,
                 (SELECT COUNT(*) FROM issues WHERE project_id = p.id) as total_issues,
                 (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND status NOT IN ('Completed', 'WND')) as active_issues,
                 (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND assigned_to_id = $currentUserId AND status NOT IN ('Completed', 'WND')) as my_active_issues,
-                COALESCE((SELECT MAX(updated_at) FROM issues WHERE project_id = p.id), p.created_at) as last_activity
+                COALESCE((SELECT MAX(updated_at) FROM issues WHERE project_id = p.id), p.created_at) as last_activity,
+                up.is_pinned
             FROM projects p
             JOIN users u ON p.owner_id = u.id
+            LEFT JOIN user_projects up ON up.project_id = p.id AND up.user_id = ?
             $whereClause
             ORDER BY $orderBy
         ";
 
         $stmt = $db->prepare($sql);
+        $params = array_merge([$currentUserId], $params);
         $stmt->execute($params);
         $projects = $stmt->fetchAll();
 
@@ -265,11 +268,12 @@ class ProjectController {
         Auth::requireLogin();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $_POST['id'];
+            $currentUserId = (int)Auth::user()['id'];
             $db = Database::connect();
 
-            // Pin the project
-            $stmt = $db->prepare("UPDATE projects SET pinned = 1 WHERE id = ?");
-            $stmt->execute([$id]);
+            // Insert or update the user_project record to pin the project
+            $stmt = $db->prepare("INSERT OR REPLACE INTO user_projects (user_id, project_id, is_pinned) VALUES (?, ?, 1)");
+            $stmt->execute([$currentUserId, $id]);
 
             Logger::log('Project Pinned', "Project ID: $id");
 
@@ -290,11 +294,12 @@ class ProjectController {
         Auth::requireLogin();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = $_POST['id'];
+            $currentUserId = (int)Auth::user()['id'];
             $db = Database::connect();
 
-            // Unpin the project
-            $stmt = $db->prepare("UPDATE projects SET pinned = 0 WHERE id = ?");
-            $stmt->execute([$id]);
+            // Update the user_project record to unpin the project
+            $stmt = $db->prepare("INSERT OR REPLACE INTO user_projects (user_id, project_id, is_pinned) VALUES (?, ?, 0)");
+            $stmt->execute([$currentUserId, $id]);
 
             Logger::log('Project Unpinned', "Project ID: $id");
 

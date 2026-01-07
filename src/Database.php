@@ -34,7 +34,6 @@ class Database {
                 color TEXT DEFAULT '#007bff',
                 text_color TEXT DEFAULT '#ffffff',
                 owner_id INTEGER NOT NULL,
-                pinned INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (owner_id) REFERENCES users(id)
             )",
@@ -80,6 +79,16 @@ class Database {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )",
+            "CREATE TABLE IF NOT EXISTS user_projects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                project_id INTEGER NOT NULL,
+                is_pinned INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (project_id) REFERENCES projects(id),
+                UNIQUE(user_id, project_id)
+            )",
             "CREATE TABLE IF NOT EXISTS settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 key TEXT UNIQUE NOT NULL,
@@ -117,10 +126,20 @@ class Database {
             // Column likely already exists
         }
 
+        // Migration for user_projects table
         try {
-            self::$pdo->exec("ALTER TABLE projects ADD COLUMN pinned INTEGER DEFAULT 0");
+            self::$pdo->exec("CREATE TABLE user_projects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                project_id INTEGER NOT NULL,
+                is_pinned INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (project_id) REFERENCES projects(id),
+                UNIQUE(user_id, project_id)
+            )");
         } catch (PDOException $e) {
-            // Column likely already exists
+            // Table likely already exists
         }
     }
 }

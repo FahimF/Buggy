@@ -42,7 +42,7 @@
             <div class="card-header d-flex justify-content-between align-items-center" style="background-color: <?= htmlspecialchars($project['color']) ?>; color: <?= htmlspecialchars($project['text_color'] ?? '#ffffff') ?>;">
                 <h5 class="card-title mb-0">
                     <?= htmlspecialchars($project['name']) ?>
-                    <?php if ($project['pinned']): ?>
+                    <?php if ($project['is_pinned']): ?>
                         <i class="bi bi-pin-angle-fill text-warning" title="Pinned"></i>
                     <?php endif; ?>
                 </h5>
@@ -51,7 +51,7 @@
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <?php if ($project['pinned']): ?>
+                        <?php if ($project['is_pinned']): ?>
                             <li>
                                 <form action="/projects/unpin" method="post">
                                     <input type="hidden" name="id" value="<?= $project['id'] ?>">
