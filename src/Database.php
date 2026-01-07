@@ -79,6 +79,38 @@ class Database {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )",
+            "CREATE TABLE IF NOT EXISTS task_lists (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                owner_id INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (owner_id) REFERENCES users(id)
+            )",
+            "CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                list_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                assigned_to_id INTEGER,
+                priority TEXT DEFAULT 'Medium',
+                is_one_time INTEGER DEFAULT 1,
+                recurring_period TEXT, -- daily, weekly, monthly, yearly
+                start_date DATETIME,
+                status TEXT DEFAULT 'incomplete', -- incomplete, completed, ND, WND
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (list_id) REFERENCES task_lists(id) ON DELETE CASCADE,
+                FOREIGN KEY (assigned_to_id) REFERENCES users(id)
+            )",
+            "CREATE TABLE IF NOT EXISTS user_inbox (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                task_id INTEGER NOT NULL,
+                is_read INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+            )",
             "CREATE TABLE IF NOT EXISTS user_projects (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
@@ -137,6 +169,54 @@ class Database {
                 FOREIGN KEY (user_id) REFERENCES users(id),
                 FOREIGN KEY (project_id) REFERENCES projects(id),
                 UNIQUE(user_id, project_id)
+            )");
+        } catch (PDOException $e) {
+            // Table likely already exists
+        }
+
+        // Migrations for task management tables
+        try {
+            self::$pdo->exec("CREATE TABLE task_lists (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                owner_id INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (owner_id) REFERENCES users(id)
+            )");
+        } catch (PDOException $e) {
+            // Table likely already exists
+        }
+
+        try {
+            self::$pdo->exec("CREATE TABLE tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                list_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                assigned_to_id INTEGER,
+                priority TEXT DEFAULT 'Medium',
+                is_one_time INTEGER DEFAULT 1,
+                recurring_period TEXT, -- daily, weekly, monthly, yearly
+                start_date DATETIME,
+                status TEXT DEFAULT 'incomplete', -- incomplete, completed, ND, WND
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (list_id) REFERENCES task_lists(id) ON DELETE CASCADE,
+                FOREIGN KEY (assigned_to_id) REFERENCES users(id)
+            )");
+        } catch (PDOException $e) {
+            // Table likely already exists
+        }
+
+        try {
+            self::$pdo->exec("CREATE TABLE user_inbox (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                task_id INTEGER NOT NULL,
+                is_read INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
             )");
         } catch (PDOException $e) {
             // Table likely already exists

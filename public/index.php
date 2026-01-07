@@ -102,6 +102,32 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new AdminController())->settings();
 } elseif ($uri === '/admin/settings/test-email') {
     (new AdminController())->testEmail();
+} elseif ($uri === '/tasks') {
+    (new TaskController())->index();
+} elseif ($uri === '/tasks/create-list') {
+    (new TaskController())->createList();
+} elseif ($uri === '/tasks/update-list') {
+    (new TaskController())->updateList();
+} elseif ($uri === '/tasks/delete-list') {
+    (new TaskController())->deleteList();
+} elseif (preg_match('#^/tasks/list/(\d+)$#', $uri, $matches)) {
+    (new TaskController())->listTasks($matches[1]);
+} elseif ($uri === '/tasks/create-task') {
+    (new TaskController())->createTask();
+} elseif ($uri === '/tasks/update-task') {
+    (new TaskController())->updateTask();
+} elseif ($uri === '/tasks/delete-task') {
+    (new TaskController())->deleteTask();
+} elseif ($uri === '/tasks/update-status') {
+    (new TaskController())->updateTaskStatus();
+} elseif ($uri === '/tasks/inbox') {
+    (new TaskController())->inbox();
+} elseif ($uri === '/tasks/mark-read') {
+    (new TaskController())->markInboxRead();
+} elseif ($uri === '/tasks/mark-all-read') {
+    (new TaskController())->markInboxAllRead();
+} elseif ($uri === '/tasks/process-recurring') {
+    (new TaskController())->processRecurringTasks();
 } else {
     http_response_code(404);
     echo "404 Not Found";

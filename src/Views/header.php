@@ -75,6 +75,21 @@ function getStatusBadgeClass($status) {
                     <li class="nav-item">
                         <a class="nav-link" href="/projects">Projects</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/tasks">
+                            Tasks
+                            <?php
+                            if (Auth::user()) {
+                                $db = Database::connect();
+                                $userId = (int)Auth::user()['id'];
+                                $unreadCount = $db->query("SELECT COUNT(*) as count FROM user_inbox WHERE user_id = $userId AND is_read = 0")->fetch()['count'];
+                                if ($unreadCount > 0) {
+                                    echo '<span class="badge bg-danger">' . $unreadCount . '</span>';
+                                }
+                            }
+                            ?>
+                        </a>
+                    </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">
                     <?php if (Auth::user()['is_admin']): ?>

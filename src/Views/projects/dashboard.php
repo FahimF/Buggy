@@ -28,6 +28,39 @@ function getTypeBadgeClass($type) {
             return 'bg-secondary';
     }
 }
+
+function getTaskStatusForm($taskId, $listId, $status, $isRecurring) {
+    // For recurring tasks, don't show WND option since user might do it another day
+    if ($isRecurring) {
+        $options = [
+            'incomplete' => 'Incomplete',
+            'completed' => 'Complete',
+            'ND' => 'ND (Not Done)'
+        ];
+    } else {
+        $options = [
+            'incomplete' => 'Incomplete',
+            'completed' => 'Complete',
+            'ND' => 'ND (Not Done)',
+            'WND' => 'WND (Will Not Do)'
+        ];
+    }
+
+    $html = '<form action="/tasks/update-status" method="post" class="d-inline">';
+    $html .= '<input type="hidden" name="id" value="' . $taskId . '">';
+    $html .= '<input type="hidden" name="list_id" value="' . $listId . '">';
+    $html .= '<select name="status" class="form-select form-select-sm" onchange="this.form.submit()">';
+
+    foreach ($options as $value => $label) {
+        $selected = ($status === $value) ? 'selected' : '';
+        $html .= '<option value="' . $value . '" ' . $selected . '>' . $label . '</option>';
+    }
+
+    $html .= '</select>';
+    $html .= '</form>';
+
+    return $html;
+}
 ?>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -49,6 +82,58 @@ function getTypeBadgeClass($type) {
         </button>
     </div>
 </div>
+
+<!-- Display Tasks assigned to the user -->
+<?php if (!empty($allTasks)): ?>
+    <div class="mb-4">
+        <h3 class="border-bottom pb-2">Tasks Assigned to You <span class="badge bg-info"><?= count($allTasks) ?></span></h3>
+        <div class="row">
+            <?php foreach ($allTasks as $task): ?>
+                <div class="col-md-12 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="card-title">
+                                        <a href="/tasks/list/<?= $task['list_id'] ?>" class="text-decoration-none">
+                                            [<?= htmlspecialchars($task['list_title']) ?>] <?= htmlspecialchars($task['title']) ?>
+                                        </a>
+                                    </h5>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-secondary me-2">
+                                        <i class="bi bi-calendar"></i> <?= date('M j', strtotime($task['created_at'])) ?>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <?php if ($task['description']): ?>
+                                <p class="card-text description-preview">
+                                    <?= htmlspecialchars(strip_tags($task['description'])) ?>
+                                </p>
+                            <?php endif; ?>
+
+                            <div class="mt-3">
+                                <span class="badge <?= getPriorityBadgeClass($task['priority']) ?> me-2">
+                                    <?= htmlspecialchars($task['priority']) ?>
+                                </span>
+                                <?php if ($task['is_one_time'] == 1): ?>
+                                    <span class="badge bg-secondary me-2">One-time</span>
+                                <?php else: ?>
+                                    <span class="badge bg-info me-2">Recurring (<?= ucfirst($task['recurring_period']) ?>)</span>
+                                <?php endif; ?>
+
+                                <div class="ms-2 d-inline-block">
+                                    <?= getTaskStatusForm($task['id'], $task['list_id'], $task['status'], $task['is_one_time'] == 0) ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+<?php endif; ?>
 
 <?php if (empty($groupedIssues)): ?>
     <div class="alert alert-info">

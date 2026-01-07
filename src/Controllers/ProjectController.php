@@ -25,6 +25,20 @@ class ProjectController {
         $stmt->execute([$currentUserId]);
         $allIssues = $stmt->fetchAll();
 
+        // Fetch tasks assigned to the current user
+        $taskSql = "
+            SELECT t.*, tl.title as list_title, u.username as assigned_by_name
+            FROM tasks t
+            JOIN task_lists tl ON t.list_id = tl.id
+            LEFT JOIN users u ON tl.owner_id = u.id
+            WHERE t.assigned_to_id = ? AND t.status = 'incomplete'
+            ORDER BY t.created_at DESC
+        ";
+
+        $taskStmt = $db->prepare($taskSql);
+        $taskStmt->execute([$currentUserId]);
+        $allTasks = $taskStmt->fetchAll();
+
         // Group the issues based on the selected option
         $groupedIssues = $this->groupIssues($allIssues, $groupBy);
 
