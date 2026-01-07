@@ -114,7 +114,7 @@ function getTaskStatusForm($taskId, $listId, $status, $isRecurring) {
 
                             <?php if ($task['description']): ?>
                                 <p class="card-text description-preview">
-                                    <?= htmlspecialchars(strip_tags($task['description'])) ?>
+                                    <?= htmlspecialchars(html_entity_decode(strip_tags($task['description']))) ?>
                                 </p>
                             <?php endif; ?>
 
@@ -171,7 +171,7 @@ function getTaskStatusForm($taskId, $listId, $status, $isRecurring) {
 
                                 <?php if ($issue['description']): ?>
                                     <p class="card-text description-preview">
-                                        <?= htmlspecialchars(strip_tags($issue['description'])) ?>
+                                        <?= htmlspecialchars(html_entity_decode(strip_tags($issue['description']))) ?>
                                     </p>
                                 <?php endif; ?>
 
