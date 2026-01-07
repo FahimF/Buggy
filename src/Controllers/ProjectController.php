@@ -1,10 +1,34 @@
 <?php
 
 class ProjectController {
+    public function dashboard() {
+        Auth::requireLogin();
+        $db = Database::connect();
+        $currentUserId = (int)Auth::user()['id'];
+
+        // Fetch issues assigned to the current user with project name and comment count
+        $sql = "
+            SELECT i.*, p.name as project_name, u.username as assigned_to_name, c.username as creator_name,
+                (SELECT COUNT(*) FROM comments WHERE issue_id = i.id) as comment_count
+            FROM issues i
+            JOIN projects p ON i.project_id = p.id
+            LEFT JOIN users u ON i.assigned_to_id = u.id
+            JOIN users c ON i.creator_id = c.id
+            WHERE i.assigned_to_id = ? AND i.status NOT IN ('Completed', 'WND')
+            ORDER BY i.updated_at DESC
+        ";
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$currentUserId]);
+        $issues = $stmt->fetchAll();
+
+        require __DIR__ . '/../Views/projects/dashboard.php';
+    }
+
     public function index() {
         Auth::requireLogin();
         $db = Database::connect();
-        
+
         // Handle sort persistence
         if (isset($_GET['sort'])) {
             $sort = $_GET['sort'];
@@ -16,7 +40,7 @@ class ProjectController {
         }
 
         $orderBy = 'p.created_at DESC';
-        
+
         if ($sort === 'updated') {
             $orderBy = 'last_activity DESC';
         } elseif ($sort === 'active_issues') {
@@ -44,16 +68,16 @@ class ProjectController {
                 (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND status NOT IN ('Completed', 'WND')) as active_issues,
                 (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND assigned_to_id = $currentUserId AND status NOT IN ('Completed', 'WND')) as my_active_issues,
                 COALESCE((SELECT MAX(updated_at) FROM issues WHERE project_id = p.id), p.created_at) as last_activity
-            FROM projects p 
-            JOIN users u ON p.owner_id = u.id 
+            FROM projects p
+            JOIN users u ON p.owner_id = u.id
             $whereClause
             ORDER BY $orderBy
         ";
-        
+
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         $projects = $stmt->fetchAll();
-        
+
         // Fetch users for the modal
         $users = $db->query("SELECT id, username FROM users ORDER BY username")->fetchAll();
 
@@ -66,7 +90,7 @@ class ProjectController {
             GROUP BY i.project_id, u.username
         ";
         $statsRows = $db->query($statsQuery)->fetchAll();
-        
+
         $projectStats = [];
         foreach ($statsRows as $row) {
             $projectStats[$row['project_id']][] = [
@@ -74,7 +98,7 @@ class ProjectController {
                 'count' => $row['count']
             ];
         }
-        
+
         require __DIR__ . '/../Views/projects/index.php';
     }
 

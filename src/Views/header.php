@@ -68,12 +68,12 @@ function getStatusBadgeClass($status) {
 <body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
-            <a class="navbar-brand" href="/">Buggy</a>
+            <a class="navbar-brand" href="/dashboard">Buggy</a>
             <?php if (Auth::user()): ?>
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">Projects</a>
+                        <a class="nav-link" href="/projects">Projects</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto">

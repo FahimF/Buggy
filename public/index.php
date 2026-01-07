@@ -22,7 +22,17 @@ $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 
 // Route handling
-if ($uri === '/' || $uri === '/index.php') {
+if ($uri === '/' || $uri === '/dashboard') {
+    if (!Auth::hasUsers()) {
+        header('Location: /setup');
+        exit;
+    }
+    if (!Auth::user()) {
+        header('Location: /login');
+        exit;
+    }
+    (new ProjectController())->dashboard();
+} elseif ($uri === '/projects' || $uri === '/projects/index.php') {
     if (!Auth::hasUsers()) {
         header('Location: /setup');
         exit;
