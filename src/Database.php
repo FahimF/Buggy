@@ -34,6 +34,7 @@ class Database {
                 color TEXT DEFAULT '#007bff',
                 text_color TEXT DEFAULT '#ffffff',
                 owner_id INTEGER NOT NULL,
+                pinned INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (owner_id) REFERENCES users(id)
             )",
@@ -112,6 +113,12 @@ class Database {
 
         try {
             self::$pdo->exec("ALTER TABLE users ADD COLUMN email TEXT");
+        } catch (PDOException $e) {
+            // Column likely already exists
+        }
+
+        try {
+            self::$pdo->exec("ALTER TABLE projects ADD COLUMN pinned INTEGER DEFAULT 0");
         } catch (PDOException $e) {
             // Column likely already exists
         }

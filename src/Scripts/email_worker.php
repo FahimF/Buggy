@@ -94,7 +94,7 @@ function processCommentNotification($db, $host, $data) {
     if (empty($emails)) return;
 
     $subject = "[" . $issue['project_name'] . "] " . "New Comment on Issue: " . $issue['title'];
-    $message = "A new comment was posted on issue: " . $issue['title'] . "\nProject: " . $issue['project_name'] . "\n\n" .
+    $message = "A new comment was posted on issue: " . $issue['title'] . "\n\nProject: " . $issue['project_name'] . "\n\n" .
                "Comment:\n" . $comment . "\n\n" .
                "View Issue: http://" . $host . "/issues/$issueId";
 
@@ -126,7 +126,7 @@ function processAssignmentNotification($db, $host, $data) {
     $assignerName = $assigner ? $assigner['username'] : 'System';
 
     $subject = "[" . $issue['project_name'] . "] " . "Assigned to Issue: " . $issue['title'];
-    $message = "You have been assigned to issue: " . $issue['title'] . "\nProject: " . $issue['project_name'] . "\nAssigner: $assignerName.\n\n" .
+    $message = "You have been assigned to issue: " . $issue['title'] . "\n\nProject: " . $issue['project_name'] . "\n\nAssigner: $assignerName.\n\n" .
                "View Issue: http://" . $host . "/issues/$issueId";
 
     sendEmails([$user['email']], $subject, $message);

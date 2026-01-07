@@ -150,16 +150,17 @@ class ProjectController {
             $sort = 'created_at';
         }
 
-        $orderBy = 'p.created_at DESC';
+        // For pinned projects, they should always appear at the top regardless of sort order
+        $orderBy = 'p.pinned DESC, p.created_at DESC';
 
         if ($sort === 'updated') {
-            $orderBy = 'last_activity DESC';
+            $orderBy = 'p.pinned DESC, last_activity DESC';
         } elseif ($sort === 'active_issues') {
-            $orderBy = 'active_issues DESC';
+            $orderBy = 'p.pinned DESC, active_issues DESC';
         } elseif ($sort === 'my_active_issues') {
-            $orderBy = 'my_active_issues DESC';
+            $orderBy = 'p.pinned DESC, my_active_issues DESC';
         } elseif ($sort === 'name') {
-            $orderBy = 'p.name ASC';
+            $orderBy = 'p.pinned DESC, p.name ASC';
         }
 
         $currentUserId = (int)Auth::user()['id'];
@@ -254,9 +255,59 @@ class ProjectController {
             $db = Database::connect();
             $stmt = $db->prepare("DELETE FROM projects WHERE id = ?");
             $stmt->execute([$id]);
-            
+
             Logger::log('Project Deleted', "Project ID: $id");
             header('Location: /');
+        }
+    }
+
+    public function pin() {
+        Auth::requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $_POST['id'];
+            $db = Database::connect();
+
+            // Pin the project
+            $stmt = $db->prepare("UPDATE projects SET pinned = 1 WHERE id = ?");
+            $stmt->execute([$id]);
+
+            Logger::log('Project Pinned', "Project ID: $id");
+
+            // Check if it's an AJAX request
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true]);
+                exit;
+            } else {
+                // Redirect back to the projects page
+                header('Location: ' . $_SERVER['HTTP_REFERER']);
+                exit;
+            }
+        }
+    }
+
+    public function unpin() {
+        Auth::requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id = $_POST['id'];
+            $db = Database::connect();
+
+            // Unpin the project
+            $stmt = $db->prepare("UPDATE projects SET pinned = 0 WHERE id = ?");
+            $stmt->execute([$id]);
+
+            Logger::log('Project Unpinned', "Project ID: $id");
+
+            // Check if it's an AJAX request
+            if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true]);
+                exit;
+            } else {
+                // Redirect back to the projects page
+                header('Location: ' . $_SERVER['HTTP_REFERER']);
+                exit;
+            }
         }
     }
 }

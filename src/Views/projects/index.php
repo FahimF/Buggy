@@ -40,12 +40,37 @@
     <div class="col-md-4 mb-4">
         <div class="card h-100 shadow-sm">
             <div class="card-header d-flex justify-content-between align-items-center" style="background-color: <?= htmlspecialchars($project['color']) ?>; color: <?= htmlspecialchars($project['text_color'] ?? '#ffffff') ?>;">
-                <h5 class="card-title mb-0"><?= htmlspecialchars($project['name']) ?></h5>
+                <h5 class="card-title mb-0">
+                    <?= htmlspecialchars($project['name']) ?>
+                    <?php if ($project['pinned']): ?>
+                        <i class="bi bi-pin-angle-fill text-warning" title="Pinned"></i>
+                    <?php endif; ?>
+                </h5>
                 <div class="dropdown">
                     <button class="btn btn-link p-0" style="color: <?= htmlspecialchars($project['text_color'] ?? '#ffffff') ?>;" data-bs-toggle="dropdown">
                         <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        <?php if ($project['pinned']): ?>
+                            <li>
+                                <form action="/projects/unpin" method="post">
+                                    <input type="hidden" name="id" value="<?= $project['id'] ?>">
+                                    <button type="submit" class="dropdown-item" title="Unpin project">
+                                        <i class="bi bi-pin-angle"></i> Unpin
+                                    </button>
+                                </form>
+                            </li>
+                        <?php else: ?>
+                            <li>
+                                <form action="/projects/pin" method="post">
+                                    <input type="hidden" name="id" value="<?= $project['id'] ?>">
+                                    <button type="submit" class="dropdown-item" title="Pin project">
+                                        <i class="bi bi-pin"></i> Pin
+                                    </button>
+                                </form>
+                            </li>
+                        <?php endif; ?>
+                        <li><hr class="dropdown-divider"></li>
                         <li>
                             <a href="#" class="dropdown-item add-issue-btn" data-project-id="<?= $project['id'] ?>" data-type="Bug">Add Bug</a>
                         </li>
@@ -54,7 +79,7 @@
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                            <button class="dropdown-item edit-project-btn" 
+                            <button class="dropdown-item edit-project-btn"
                                 data-id="<?= $project['id'] ?>"
                                 data-name="<?= htmlspecialchars($project['name']) ?>"
                                 data-color="<?= htmlspecialchars($project['color']) ?>"
@@ -210,8 +235,46 @@ document.addEventListener('DOMContentLoaded', function() {
 
             document.getElementById('createIssueProjectId').value = projectId;
             document.getElementById('createIssueType').value = type;
-            
+
             createIssueModal.show();
+        });
+    });
+
+    // Pin/Unpin Project Logic
+    document.querySelectorAll('.dropdown-menu form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            const projectId = formData.get('id');
+            const isPin = this.querySelector('button').textContent.includes('Pin');
+
+            fetch(isPin ? '/projects/pin' : '/projects/unpin', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Network response was not ok');
+                }
+            })
+            .then(data => {
+                if (data.success) {
+                    // Update the UI without page refresh
+                    location.reload();
+                } else {
+                    throw new Error('Server returned error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the project.');
+            });
         });
     });
 });

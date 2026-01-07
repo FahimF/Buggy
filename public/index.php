@@ -54,6 +54,10 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new ProjectController())->update();
 } elseif ($uri === '/projects/delete') {
     (new ProjectController())->delete();
+} elseif ($uri === '/projects/pin') {
+    (new ProjectController())->pin();
+} elseif ($uri === '/projects/unpin') {
+    (new ProjectController())->unpin();
 } elseif (preg_match('#^/projects/(\d+)$#', $uri, $matches)) {
     (new IssueController())->index($matches[1]);
 } elseif (preg_match('#^/projects/(\d+)/kanban$#', $uri, $matches)) {
