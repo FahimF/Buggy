@@ -2,12 +2,24 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form action="/issues/create" method="post" id="createIssueForm">
-                <input type="hidden" name="project_id" id="createIssueProjectId" value="<?= isset($project) ? $project['id'] : '' ?>">
                 <div class="modal-header">
                     <h5 class="modal-title">New Issue</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <?php if (!isset($project)): ?>
+                        <div class="mb-3">
+                            <label>Project</label>
+                            <select name="project_id" class="form-select" required>
+                                <option value="">-- Select Project --</option>
+                                <?php foreach ($projects as $p): ?>
+                                    <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php else: ?>
+                        <input type="hidden" name="project_id" value="<?= $project['id'] ?>">
+                    <?php endif; ?>
                     <div class="mb-3">
                         <label>Title</label>
                         <input type="text" name="title" class="form-control" required>

@@ -210,9 +210,15 @@ class TaskController {
             $taskId = $db->lastInsertId();
 
             // Add to user's inbox if it's a one-time task or if it's the start date for recurring
-            if ($isOneTime || (!$isOneTime && $startDate && $startDate <= date('Y-m-d H:i:s'))) {
-                $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id) VALUES (?, ?)");
-                $inboxStmt->execute([$assignedToId, $taskId]);
+            $now = new DateTime();
+            $today = (clone $now)->setTime(0, 0, 0);
+            $startDay = $startDate ? (clone new DateTime($startDate))->setTime(0, 0, 0) : null;
+
+            if ($isOneTime || (!$isOneTime && $startDay && $startDay <= $today)) {
+                // Calculate due_at: null for one-time tasks, next occurrence for recurring tasks
+                $dueAt = $isOneTime ? null : $this->calculateNextOccurrence($db, $taskId);
+                $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at) VALUES (?, ?, ?)");
+                $inboxStmt->execute([$assignedToId, $taskId, $dueAt]);
             }
 
             Logger::log('Task Created', "Task: $title in List ID: $listId");
@@ -324,8 +330,10 @@ class TaskController {
             // If the task is being marked as incomplete from a completed/ND/WND state,
             // and it's a one-time task, add it back to the inbox
             if ($status === 'incomplete' && $taskInfo['is_one_time'] == 1) {
-                $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id) VALUES (?, ?)");
-                $inboxStmt->execute([$taskInfo['assigned_to_id'], $id]);
+                // Calculate due_at: null for one-time tasks, next occurrence for recurring tasks
+                $dueAt = $taskInfo['is_one_time'] ? null : $this->calculateNextOccurrence($db, $id);
+                $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at) VALUES (?, ?, ?)");
+                $inboxStmt->execute([$taskInfo['assigned_to_id'], $id, $dueAt]);
             }
 
             // Redirect appropriately based on context
@@ -344,7 +352,7 @@ class TaskController {
 
         // Fetch tasks in the user's inbox
         $sql = "
-            SELECT t.*, tl.title as list_title, u.username as assigned_by_name
+            SELECT t.*, tl.title as list_title, u.username as assigned_by_name, ui.due_at
             FROM user_inbox ui
             JOIN tasks t ON ui.task_id = t.id
             JOIN task_lists tl ON t.list_id = tl.id
@@ -422,9 +430,11 @@ class TaskController {
                 $result = $checkStmt->fetch();
 
                 if ($result['count'] == 0) {
+                    // Calculate due_at for recurring task
+                    $dueAt = $this->calculateNextOccurrence($db, $task['id']);
                     // Add to user's inbox
-                    $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id) VALUES (?, ?)");
-                    $inboxStmt->execute([$task['assigned_to_id'], $task['id']]);
+                    $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at) VALUES (?, ?, ?)");
+                    $inboxStmt->execute([$task['assigned_to_id'], $task['id'], $dueAt]);
 
                     Logger::log('Recurring Task Added to Inbox', "Task ID: {$task['id']}, User ID: {$task['assigned_to_id']}");
                 }
@@ -476,5 +486,61 @@ class TaskController {
 
         // Return true if it's time to add the task again
         return $nextDue <= $now;
+    }
+
+    private function calculateNextOccurrence($db, $taskId) {
+        // Get task details
+        $taskSql = "SELECT * FROM tasks WHERE id = ?";
+        $taskStmt = $db->prepare($taskSql);
+        $taskStmt->execute([$taskId]);
+        $task = $taskStmt->fetch();
+
+        if (!$task || $task['is_one_time'] == 1) {
+            return null; // One-time tasks have null due_at
+        }
+
+        $now = new DateTime();
+        $startDate = new DateTime($task['start_date'] ?? date('Y-m-d H:i:s'));
+
+        // If start date is in the future, return that date
+        if ($startDate > $now) {
+            return $startDate->format('Y-m-d H:i:s');
+        }
+
+        // Check the last time this specific task was added to the inbox
+        $lastAddedSql = "
+            SELECT MAX(ui.created_at) as last_added
+            FROM user_inbox ui
+            WHERE ui.task_id = ?
+        ";
+        $lastAddedStmt = $db->prepare($lastAddedSql);
+        $lastAddedStmt->execute([$taskId]);
+        $lastAddedResult = $lastAddedStmt->fetch();
+
+        if ($lastAddedResult['last_added']) {
+            $lastAdded = new DateTime($lastAddedResult['last_added']);
+            $nextDue = clone $lastAdded;
+
+            switch ($task['recurring_period']) {
+                case 'daily':
+                    $nextDue->modify('+1 day');
+                    break;
+                case 'weekly':
+                    $nextDue->modify('+1 week');
+                    break;
+                case 'monthly':
+                    $nextDue->modify('+1 month');
+                    break;
+                case 'yearly':
+                    $nextDue->modify('+1 year');
+                    break;
+                default:
+                    return null;
+            }
+        } else {
+            $nextDue = $startDate;
+        }
+
+        return $nextDue->format('Y-m-d H:i:s');
     }
 }

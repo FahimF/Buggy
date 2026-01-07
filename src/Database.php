@@ -108,6 +108,7 @@ class Database {
                 task_id INTEGER NOT NULL,
                 is_read INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                due_at DATETIME NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id),
                 FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
             )",
@@ -215,11 +216,19 @@ class Database {
                 task_id INTEGER NOT NULL,
                 is_read INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                due_at DATETIME NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id),
                 FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
             )");
         } catch (PDOException $e) {
             // Table likely already exists
+        }
+
+        // Migration for due_at column in user_inbox table
+        try {
+            self::$pdo->exec("ALTER TABLE user_inbox ADD COLUMN due_at DATETIME NULL");
+        } catch (PDOException $e) {
+            // Column likely already exists
         }
     }
 }

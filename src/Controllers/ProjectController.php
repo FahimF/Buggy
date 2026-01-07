@@ -3,6 +3,12 @@
 class ProjectController {
     public function dashboard() {
         Auth::requireLogin();
+
+        // Run the recurring/inbox task processor
+        // Using require_once to ensure it runs but functions aren't redefined if included elsewhere
+        // Note: The script executes processRecurringTasks() at the end of the file
+        require_once __DIR__ . '/../../process_recurring_tasks.php';
+
         $db = Database::connect();
         $currentUserId = (int)Auth::user()['id'];
 
@@ -27,17 +33,25 @@ class ProjectController {
 
         // Fetch tasks assigned to the current user
         $taskSql = "
-            SELECT t.*, tl.title as list_title, u.username as assigned_by_name
+            SELECT t.*, tl.title as list_title, u.username as assigned_by_name, ui.due_at
             FROM tasks t
+            JOIN user_inbox ui ON t.id = ui.task_id
             JOIN task_lists tl ON t.list_id = tl.id
             LEFT JOIN users u ON tl.owner_id = u.id
-            WHERE t.assigned_to_id = ? AND t.status = 'incomplete'
+            WHERE ui.user_id = ? AND t.status = 'incomplete'
+            GROUP BY t.id
             ORDER BY t.created_at DESC
         ";
 
         $taskStmt = $db->prepare($taskSql);
         $taskStmt->execute([$currentUserId]);
         $allTasks = $taskStmt->fetchAll();
+
+        // Fetch users for the modal
+        $users = $db->query("SELECT id, username FROM users ORDER BY username")->fetchAll();
+
+        // Fetch projects for the modal (required if project_id is not set)
+        $projects = $db->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
 
         // Group the issues based on the selected option
         $groupedIssues = $this->groupIssues($allIssues, $groupBy);

@@ -27,7 +27,7 @@
                                     <th>List</th>
                                     <th>Priority</th>
                                     <th>Status</th>
-                                    <th>Received</th>
+                                    <th>Due</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -67,7 +67,13 @@
                                         ?>
                                         <span class="badge bg-<?= $statusClass ?>"><?= htmlspecialchars($task['status']) ?></span>
                                     </td>
-                                    <td><?= date('M j, Y g:i A', strtotime($task['created_at'])) ?></td>
+                                    <td>
+                                        <?php if ($task['due_at'] === null): ?>
+                                            <span class="badge bg-primary">Now</span>
+                                        <?php else: ?>
+                                            <?= date('M j, Y g:i A', strtotime($task['due_at'])) ?>
+                                        <?php endif; ?>
+                                    </td>
                                     <td>
                                         <div class="btn-group">
                                             <a href="/tasks/list/<?= $task['list_id'] ?>" class="btn btn-sm btn-outline-primary" title="View Task">

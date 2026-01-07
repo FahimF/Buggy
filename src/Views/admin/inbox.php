@@ -27,6 +27,7 @@
                                 <th>Task</th>
                                 <th>Read Status</th>
                                 <th>Created At</th>
+                                <th>Due At</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -58,6 +59,13 @@
                                     <?php endif; ?>
                                 </td>
                                 <td><?= date('M j, Y g:i A', strtotime($item['created_at'])) ?></td>
+                                <td>
+                                    <?php if ($item['due_at'] === null): ?>
+                                        <span class="badge bg-primary">Now</span>
+                                    <?php else: ?>
+                                        <?= date('M j, Y g:i A', strtotime($item['due_at'])) ?>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>

@@ -102,7 +102,12 @@ function getTaskStatusForm($taskId, $listId, $status, $isRecurring) {
                                 </div>
                                 <div class="d-flex align-items-center">
                                     <span class="badge bg-secondary me-2">
-                                        <i class="bi bi-calendar"></i> <?= date('M j', strtotime($task['created_at'])) ?>
+                                        <i class="bi bi-calendar-event"></i> 
+                                        <?php if ($task['due_at']): ?>
+                                            <?= date('M j, Y g:i A', strtotime($task['due_at'])) ?>
+                                        <?php else: ?>
+                                            Now
+                                        <?php endif; ?>
                                     </span>
                                 </div>
                             </div>
