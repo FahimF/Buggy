@@ -29,6 +29,7 @@
                                     <th>Priority</th>
                                     <th>Type</th>
                                     <th>Status</th>
+                                    <th>Due</th>
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
@@ -80,6 +81,9 @@
                                         ?>
                                         <span class="badge bg-<?= $statusClass ?>"><?= htmlspecialchars($task['status']) ?></span>
                                     </td>
+                                    <td>
+                                        <?= htmlspecialchars($task['next_occurrence']) ?>
+                                    </td>
                                     <td><?= date('M j, Y', strtotime($task['created_at'])) ?></td>
                                     <td>
                                         <div class="btn-group">
@@ -96,8 +100,8 @@
                                             <?php else: ?>
                                                 <button class="btn btn-sm btn-outline-primary edit-task-btn"
                                                     data-id="<?= $task['id'] ?>"
-                                                    data-title="<?= htmlspecialchars($task['title']) ?>"
-                                                    data-description="<?= htmlspecialchars($task['description']) ?>"
+                                                    data-title="<?= htmlspecialchars($task['title'], ENT_QUOTES, 'UTF-8') ?>"
+                                                    data-description="<?= htmlspecialchars($task['description'], ENT_QUOTES, 'UTF-8') ?>"
                                                     data-assigned-to-id="<?= $task['assigned_to_id'] ?>"
                                                     data-priority="<?= $task['priority'] ?>"
                                                     data-is-one-time="<?= $task['is_one_time'] ?>"
@@ -304,17 +308,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Toggle recurring options based on checkbox
     const isOneTimeCheckbox = document.getElementById('isOneTime');
     const recurringOptions = document.querySelectorAll('.recurring-options');
-    
+
     function toggleRecurringOptions() {
         const isChecked = isOneTimeCheckbox.checked;
         recurringOptions.forEach(element => {
             element.style.display = isChecked ? 'none' : 'block';
         });
     }
-    
+
     isOneTimeCheckbox.addEventListener('change', toggleRecurringOptions);
     toggleRecurringOptions(); // Initialize
-    
+
     // Edit Task Modal Logic
     var editModal = new bootstrap.Modal(document.getElementById('editTaskModal'));
 
@@ -352,18 +356,18 @@ document.addEventListener('DOMContentLoaded', function() {
             editModal.show();
         });
     });
-    
+
     // Toggle recurring options for edit modal too
     const editIsOneTimeCheckbox = document.getElementById('editIsOneTime');
     const recurringOptionsEdit = document.querySelectorAll('.recurring-options-edit');
-    
+
     function toggleRecurringOptionsEdit() {
         const isChecked = editIsOneTimeCheckbox.checked;
         recurringOptionsEdit.forEach(element => {
             element.style.display = isChecked ? 'none' : 'block';
         });
     }
-    
+
     editIsOneTimeCheckbox.addEventListener('change', toggleRecurringOptionsEdit);
 });
 </script>

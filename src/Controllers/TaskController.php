@@ -120,6 +120,56 @@ class TaskController {
         $stmt->execute([$listId]);
         $tasks = $stmt->fetchAll();
 
+        // Calculate next occurrence for each task
+        for ($i = 0; $i < count($tasks); $i++) {
+            if ($tasks[$i]['is_one_time'] == 1) {
+                $tasks[$i]['next_occurrence'] = 'Now';
+            } else {
+                $now = new DateTime();
+                $startDate = new DateTime($tasks[$i]['start_date'] ?? date('Y-m-d H:i:s'));
+
+                // If start date is in the future, return that date
+                if ($startDate > $now) {
+                    $tasks[$i]['next_occurrence'] = $startDate->format('M j, Y g:i A');
+                } else {
+                    // Check the last time this specific task was added to the inbox
+                    $lastAddedSql = "
+                        SELECT MAX(ui.created_at) as last_added
+                        FROM user_inbox ui
+                        WHERE ui.task_id = ?
+                    ";
+                    $lastAddedStmt = $db->prepare($lastAddedSql);
+                    $lastAddedStmt->execute([$tasks[$i]['id']]);
+                    $lastAddedResult = $lastAddedStmt->fetch();
+
+                    $lastAdded = $lastAddedResult['last_added'] ? new DateTime($lastAddedResult['last_added']) : $startDate;
+
+                    // Calculate next due date based on recurrence
+                    $nextDue = clone $lastAdded;
+
+                    switch ($tasks[$i]['recurring_period']) {
+                        case 'daily':
+                            $nextDue->modify('+1 day');
+                            break;
+                        case 'weekly':
+                            $nextDue->modify('+1 week');
+                            break;
+                        case 'monthly':
+                            $nextDue->modify('+1 month');
+                            break;
+                        case 'yearly':
+                            $nextDue->modify('+1 year');
+                            break;
+                        default:
+                            $tasks[$i]['next_occurrence'] = 'Now';
+                            continue 2; // Continue the for loop
+                    }
+
+                    $tasks[$i]['next_occurrence'] = $nextDue->format('M j, Y g:i A');
+                }
+            }
+        }
+
         // Fetch all users for assignment
         $users = $db->query("SELECT id, username FROM users ORDER BY username")->fetchAll();
 
