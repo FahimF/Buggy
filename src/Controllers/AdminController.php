@@ -220,4 +220,112 @@ class AdminController {
             header('Location: /admin/users');
         }
     }
+
+    public function inbox() {
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $limit = 50; // items per page
+        $offset = ($page - 1) * $limit;
+
+        $db = Database::connect();
+
+        // Get inbox items with user and task information
+        $sql = "
+            SELECT ui.*, u.username, t.title as task_title, t.list_id as task_list_id
+            FROM user_inbox ui
+            LEFT JOIN users u ON ui.user_id = u.id
+            LEFT JOIN tasks t ON ui.task_id = t.id
+            ORDER BY ui.created_at DESC
+            LIMIT ? OFFSET ?
+        ";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([$limit, $offset]);
+        $inboxItems = $stmt->fetchAll();
+
+        // Get total count for pagination
+        $countStmt = $db->query("SELECT COUNT(*) as total FROM user_inbox");
+        $totalCount = $countStmt->fetch()['total'];
+        $totalPages = ceil($totalCount / $limit);
+
+        // Generate pagination HTML
+        $pagination = $this->generatePagination($page, $totalPages, '/admin/inbox');
+
+        $view = 'inbox';
+        require __DIR__ . '/../Views/admin/layout.php';
+    }
+
+    public function deleteSelectedInboxItems() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['inbox_ids']) && is_array($_POST['inbox_ids'])) {
+            $db = Database::connect();
+            $inboxIds = array_map('intval', $_POST['inbox_ids']); // Sanitize IDs
+
+            if (!empty($inboxIds)) {
+                $placeholders = str_repeat('?,', count($inboxIds) - 1) . '?';
+                $stmt = $db->prepare("DELETE FROM user_inbox WHERE id IN ($placeholders)");
+                $stmt->execute($inboxIds);
+
+                Logger::log('Inbox Items Deleted', "Deleted " . count($inboxIds) . " inbox items by admin");
+            }
+
+            header('Location: /admin/inbox');
+        }
+    }
+
+    public function clearReadInboxItems() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $db = Database::connect();
+
+            // Delete all read inbox items (where is_read = 1)
+            $stmt = $db->prepare("DELETE FROM user_inbox WHERE is_read = 1");
+            $stmt->execute();
+
+            $deletedCount = $stmt->rowCount();
+            Logger::log('Read Inbox Items Cleared', "Cleared $deletedCount read inbox items by admin");
+
+            header('Location: /admin/inbox');
+        }
+    }
+
+    private function generatePagination($currentPage, $totalPages, $baseUrl) {
+        if ($totalPages <= 1) {
+            return '';
+        }
+
+        $html = '<nav><ul class="pagination justify-content-center">';
+
+        // Previous button
+        if ($currentPage > 1) {
+            $html .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '?page=' . ($currentPage - 1) . '">&laquo; Previous</a></li>';
+        }
+
+        // Page numbers
+        $start = max(1, $currentPage - 2);
+        $end = min($totalPages, $currentPage + 2);
+
+        if ($start > 1) {
+            $html .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '?page=1">1</a></li>';
+            if ($start > 2) {
+                $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+        }
+
+        for ($i = $start; $i <= $end; $i++) {
+            $active = ($i == $currentPage) ? 'active' : '';
+            $html .= '<li class="page-item ' . $active . '"><a class="page-link" href="' . $baseUrl . '?page=' . $i . '">' . $i . '</a></li>';
+        }
+
+        if ($end < $totalPages) {
+            if ($end < $totalPages - 1) {
+                $html .= '<li class="page-item disabled"><span class="page-link">...</span></li>';
+            }
+            $html .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '?page=' . $totalPages . '">' . $totalPages . '</a></li>';
+        }
+
+        // Next button
+        if ($currentPage < $totalPages) {
+            $html .= '<li class="page-item"><a class="page-link" href="' . $baseUrl . '?page=' . ($currentPage + 1) . '">Next &raquo;</a></li>';
+        }
+
+        $html .= '</ul></nav>';
+        return $html;
+    }
 }

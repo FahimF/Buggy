@@ -265,6 +265,12 @@ class TaskController {
 
             Logger::log('Task Status Updated', "Task ID: $id, Status: $status");
 
+            // If the task status is completed, WND, or ND, mark the corresponding inbox item as read
+            if ($status === 'completed' || $status === 'WND' || $status === 'ND') {
+                $inboxStmt = $db->prepare("UPDATE user_inbox SET is_read = 1 WHERE task_id = ?");
+                $inboxStmt->execute([$id]);
+            }
+
             // If the task is being marked as incomplete from a completed/ND/WND state,
             // and it's a one-time task, add it back to the inbox
             if ($status === 'incomplete' && $taskInfo['is_one_time'] == 1) {

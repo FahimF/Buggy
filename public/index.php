@@ -102,6 +102,12 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new AdminController())->settings();
 } elseif ($uri === '/admin/settings/test-email') {
     (new AdminController())->testEmail();
+} elseif ($uri === '/admin/inbox') {
+    (new AdminController())->inbox();
+} elseif ($uri === '/admin/inbox/delete-selected') {
+    (new AdminController())->deleteSelectedInboxItems();
+} elseif ($uri === '/admin/inbox/clear-read') {
+    (new AdminController())->clearReadInboxItems();
 } elseif ($uri === '/tasks') {
     (new TaskController())->index();
 } elseif ($uri === '/tasks/create-list') {

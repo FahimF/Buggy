@@ -3,9 +3,6 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><?= htmlspecialchars($taskList['title']) ?></h1>
     <div class="d-flex gap-2">
-        <a href="/tasks" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Back to Lists
-        </a>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
             <i class="bi bi-plus-lg"></i> New Task
         </button>
