@@ -102,7 +102,7 @@ function getStatusBadgeClass($status) {
                     </li>
                     <?php endif; ?>
                     <li class="nav-item">
-                        <span class="nav-link">Welcome, <?= htmlspecialchars(Auth::user()['username']) ?></span>
+                        <a class="nav-link" href="/profile">Welcome, <?= htmlspecialchars(Auth::user()['username']) ?></a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/logout">Logout</a>

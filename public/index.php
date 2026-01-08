@@ -76,6 +76,10 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new AuthController())->login();
 } elseif ($uri === '/logout') {
     (new AuthController())->logout();
+} elseif ($uri === '/profile') {
+    (new ProfileController())->index();
+} elseif ($uri === '/profile/update') {
+    (new ProfileController())->update();
 } elseif ($uri === '/projects/create') {
     (new ProjectController())->create();
 } elseif ($uri === '/projects/update') {
