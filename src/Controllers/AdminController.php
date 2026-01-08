@@ -270,16 +270,16 @@ class AdminController {
         }
     }
 
-    public function clearReadInboxItems() {
+    public function clearCompletedInboxItems() {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db = Database::connect();
 
-            // Delete all read inbox items (where is_read = 1)
-            $stmt = $db->prepare("DELETE FROM user_inbox WHERE is_read = 1");
+            // Delete all completed/ND/WND inbox items (where status != 'incomplete')
+            $stmt = $db->prepare("DELETE FROM user_inbox WHERE status != 'incomplete'");
             $stmt->execute();
 
             $deletedCount = $stmt->rowCount();
-            Logger::log('Read Inbox Items Cleared', "Cleared $deletedCount read inbox items by admin");
+            Logger::log('Completed Inbox Items Cleared', "Cleared $deletedCount completed/ND/WND inbox items by admin");
 
             header('Location: /admin/inbox');
         }

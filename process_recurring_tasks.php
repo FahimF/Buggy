@@ -40,7 +40,7 @@ function processRecurringTasks() {
             
             if ($dueAt) {
                 // Add to user's inbox
-                $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at) VALUES (?, ?, ?)");
+                $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at, status) VALUES (?, ?, ?, 'incomplete')");
                 $inboxStmt->execute([$task['assigned_to_id'], $task['id'], $dueAt]);
 
                 // Log the action
@@ -69,7 +69,7 @@ function processRecurringTasks() {
 
     foreach ($oneTimeTasks as $task) {
         // Add to user's inbox
-        $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at) VALUES (?, ?, ?)");
+        $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at, status) VALUES (?, ?, ?, 'incomplete')");
         // due_at is NULL for one-time tasks
         $inboxStmt->execute([$task['assigned_to_id'], $task['id'], null]);
 

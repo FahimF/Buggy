@@ -33,12 +33,12 @@ class ProjectController {
 
         // Fetch tasks assigned to the current user
         $taskSql = "
-            SELECT t.*, tl.title as list_title, u.username as assigned_by_name, ui.due_at
+            SELECT t.*, tl.title as list_title, u.username as assigned_by_name, ui.due_at, ui.id as inbox_id
             FROM tasks t
             JOIN user_inbox ui ON t.id = ui.task_id
             JOIN task_lists tl ON t.list_id = tl.id
             LEFT JOIN users u ON tl.owner_id = u.id
-            WHERE ui.user_id = ? AND t.status = 'incomplete'
+            WHERE ui.user_id = ? AND ui.status = 'incomplete'
             ORDER BY ui.due_at ASC, t.created_at DESC
         ";
 

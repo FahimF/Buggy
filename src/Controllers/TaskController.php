@@ -221,7 +221,7 @@ class TaskController {
             if ($isOneTime || (!$isOneTime && $startDay && $startDay <= $today)) {
                 // Calculate due_at: null for one-time tasks, next occurrence for recurring tasks
                 $dueAt = $isOneTime ? null : $this->calculateNextOccurrence($db, $taskId);
-                $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at) VALUES (?, ?, ?)");
+                $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at, status) VALUES (?, ?, ?, 'incomplete')");
                 $inboxStmt->execute([$assignedToId, $taskId, $dueAt]);
             }
 
@@ -306,6 +306,7 @@ class TaskController {
             $id = $_POST['id'];
             $status = $_POST['status'];
             $listId = $_POST['list_id'] ?? null;
+            $inboxId = $_POST['inbox_id'] ?? null;
 
             $db = Database::connect();
             $currentUserId = (int)Auth::user()['id'];
@@ -320,24 +321,40 @@ class TaskController {
                 exit;
             }
 
-            $stmt = $db->prepare("UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-            $stmt->execute([$status, $id]);
+            // 1. Update Inbox Item Status
+            // If we have a specific inbox_id, update only that one
+            if ($inboxId) {
+                $inboxStmt = $db->prepare("UPDATE user_inbox SET status = ? WHERE id = ? AND user_id = ?");
+                $inboxStmt->execute([$status, $inboxId, $currentUserId]);
+            } else {
+                // Fallback (e.g., from Task List view where specific inbox item might not be known)
+                // We update all incomplete inbox items for this task for this user
+                $inboxStmt = $db->prepare("UPDATE user_inbox SET status = ? WHERE task_id = ? AND user_id = ? AND status = 'incomplete'");
+                $inboxStmt->execute([$status, $id, $currentUserId]);
+            }
+
+            // 2. Update Parent Task Status (Only for One-Time Tasks)
+            if ($taskInfo['is_one_time'] == 1) {
+                $stmt = $db->prepare("UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmt->execute([$status, $id]);
+            }
 
             Logger::log('Task Status Updated', "Task ID: $id, Status: $status");
 
-            // If the task status is completed, WND, or ND, mark the corresponding inbox item as read
-            if ($status === 'completed' || $status === 'WND' || $status === 'ND') {
-                $inboxStmt = $db->prepare("UPDATE user_inbox SET is_read = 1 WHERE task_id = ?");
-                $inboxStmt->execute([$id]);
-            }
-
             // If the task is being marked as incomplete from a completed/ND/WND state,
-            // and it's a one-time task, add it back to the inbox
+            // and it's a one-time task, we might need to reactivate it.
+            // But since we are now driving from inbox status, if we reactivate a one-time task via this method,
+            // we should ensure an inbox item exists.
+            
             if ($status === 'incomplete' && $taskInfo['is_one_time'] == 1) {
-                // Calculate due_at: null for one-time tasks, next occurrence for recurring tasks
-                $dueAt = $taskInfo['is_one_time'] ? null : $this->calculateNextOccurrence($db, $id);
-                $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at) VALUES (?, ?, ?)");
-                $inboxStmt->execute([$taskInfo['assigned_to_id'], $id, $dueAt]);
+                // Check if active inbox item exists
+                $checkStmt = $db->prepare("SELECT COUNT(*) as count FROM user_inbox WHERE task_id = ? AND user_id = ? AND status = 'incomplete'");
+                $checkStmt->execute([$id, $taskInfo['assigned_to_id']]);
+                if ($checkStmt->fetch()['count'] == 0) {
+                     // Add back to inbox
+                     $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at, status) VALUES (?, ?, ?, 'incomplete')");
+                     $inboxStmt->execute([$taskInfo['assigned_to_id'], $id, null]);
+                }
             }
 
             // Redirect appropriately based on context
@@ -356,12 +373,12 @@ class TaskController {
 
         // Fetch tasks in the user's inbox
         $sql = "
-            SELECT t.*, tl.title as list_title, u.username as assigned_by_name, ui.due_at
+            SELECT t.*, tl.title as list_title, u.username as assigned_by_name, ui.due_at, ui.status as inbox_status, ui.id as inbox_id
             FROM user_inbox ui
             JOIN tasks t ON ui.task_id = t.id
             JOIN task_lists tl ON t.list_id = tl.id
             LEFT JOIN users u ON tl.owner_id = u.id
-            WHERE ui.user_id = ?
+            WHERE ui.user_id = ? AND ui.status = 'incomplete'
             ORDER BY ui.created_at DESC
         ";
 
@@ -372,27 +389,27 @@ class TaskController {
         require __DIR__ . '/../Views/tasks/inbox.php';
     }
 
-    public function markInboxRead() {
+    public function markInboxCompleted() {
         Auth::requireLogin();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $taskId = $_POST['task_id'];
             $currentUserId = (int)Auth::user()['id'];
             
             $db = Database::connect();
-            $stmt = $db->prepare("UPDATE user_inbox SET is_read = 1 WHERE user_id = ? AND task_id = ?");
+            $stmt = $db->prepare("UPDATE user_inbox SET status = 'completed' WHERE user_id = ? AND task_id = ?");
             $stmt->execute([$currentUserId, $taskId]);
 
             header('Location: /tasks/inbox');
         }
     }
 
-    public function markInboxAllRead() {
+    public function markInboxAllCompleted() {
         Auth::requireLogin();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $currentUserId = (int)Auth::user()['id'];
             
             $db = Database::connect();
-            $stmt = $db->prepare("UPDATE user_inbox SET is_read = 1 WHERE user_id = ? AND is_read = 0");
+            $stmt = $db->prepare("UPDATE user_inbox SET status = 'completed' WHERE user_id = ? AND status = 'incomplete'");
             $stmt->execute([$currentUserId]);
 
             header('Location: /tasks/inbox');
@@ -426,7 +443,7 @@ class TaskController {
                 
                 if ($dueAt) {
                     // Add to user's inbox
-                    $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at) VALUES (?, ?, ?)");
+                    $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at, status) VALUES (?, ?, ?, 'incomplete')");
                     $inboxStmt->execute([$task['assigned_to_id'], $task['id'], $dueAt]);
 
                     Logger::log('Recurring Task Added to Inbox', "Task ID: {$task['id']}, User ID: {$task['assigned_to_id']}, Due: {$dueAt}");

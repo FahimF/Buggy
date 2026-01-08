@@ -106,8 +106,8 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new AdminController())->inbox();
 } elseif ($uri === '/admin/inbox/delete-selected') {
     (new AdminController())->deleteSelectedInboxItems();
-} elseif ($uri === '/admin/inbox/clear-read') {
-    (new AdminController())->clearReadInboxItems();
+} elseif ($uri === '/admin/inbox/clear-completed') {
+    (new AdminController())->clearCompletedInboxItems();
 } elseif ($uri === '/tasks') {
     (new TaskController())->index();
 } elseif ($uri === '/tasks/create-list') {
@@ -128,10 +128,10 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new TaskController())->updateTaskStatus();
 } elseif ($uri === '/tasks/inbox') {
     (new TaskController())->inbox();
-} elseif ($uri === '/tasks/mark-read') {
-    (new TaskController())->markInboxRead();
-} elseif ($uri === '/tasks/mark-all-read') {
-    (new TaskController())->markInboxAllRead();
+} elseif ($uri === '/tasks/mark-completed') {
+    (new TaskController())->markInboxCompleted();
+} elseif ($uri === '/tasks/mark-all-completed') {
+    (new TaskController())->markInboxAllCompleted();
 } elseif ($uri === '/tasks/process-recurring') {
     (new TaskController())->processRecurringTasks();
 } else {

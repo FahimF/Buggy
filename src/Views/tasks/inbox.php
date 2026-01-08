@@ -3,8 +3,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>User Inbox</h1>
     <div class="d-flex gap-2">
-        <form action="/tasks/mark-all-read" method="post" class="d-inline">
-            <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Mark all tasks as read?')">Mark All Read</button>
+        <form action="/tasks/mark-all-completed" method="post" class="d-inline">
+            <button type="submit" class="btn btn-outline-primary" onclick="return confirm('Mark all tasks as completed?')">Mark All Completed</button>
         </form>
     </div>
 </div>
@@ -79,9 +79,9 @@
                                             <a href="/tasks/list/<?= $task['list_id'] ?>" class="btn btn-sm btn-outline-primary" title="View Task">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <form action="/tasks/mark-read" method="post" class="d-inline">
+                                            <form action="/tasks/mark-completed" method="post" class="d-inline">
                                                 <input type="hidden" name="task_id" value="<?= $task['id'] ?>">
-                                                <button type="submit" class="btn btn-sm btn-outline-success" title="Mark Read">
+                                                <button type="submit" class="btn btn-sm btn-outline-success" title="Mark Completed">
                                                     <i class="bi bi-check"></i>
                                                 </button>
                                             </form>

@@ -107,6 +107,7 @@ class Database {
                 user_id INTEGER NOT NULL,
                 task_id INTEGER NOT NULL,
                 is_read INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'incomplete',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 due_at DATETIME NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id),
@@ -227,6 +228,25 @@ class Database {
         // Migration for due_at column in user_inbox table
         try {
             self::$pdo->exec("ALTER TABLE user_inbox ADD COLUMN due_at DATETIME NULL");
+        } catch (PDOException $e) {
+            // Column likely already exists
+        }
+
+        // Migration for status column in user_inbox table
+        try {
+            self::$pdo->exec("ALTER TABLE user_inbox ADD COLUMN status TEXT DEFAULT 'incomplete'");
+            
+            // Set status to 'completed' for read items as a baseline
+            self::$pdo->exec("UPDATE user_inbox SET status = 'completed' WHERE is_read = 1");
+            
+            // Sync one-time tasks: If the parent task has a specific status (ND, WND), reflect that in the inbox item
+            $sql = "
+                UPDATE user_inbox 
+                SET status = (SELECT status FROM tasks WHERE tasks.id = user_inbox.task_id)
+                WHERE task_id IN (SELECT id FROM tasks WHERE is_one_time = 1)
+                AND is_read = 1
+            ";
+            self::$pdo->exec($sql);
         } catch (PDOException $e) {
             // Column likely already exists
         }

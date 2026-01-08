@@ -29,7 +29,7 @@ function getTypeBadgeClass($type) {
     }
 }
 
-function getTaskStatusForm($taskId, $listId, $status, $isRecurring) {
+function getTaskStatusForm($taskId, $listId, $status, $isRecurring, $inboxId = null) {
     // For recurring tasks, don't show WND option since user might do it another day
     if ($isRecurring) {
         $options = [
@@ -49,6 +49,9 @@ function getTaskStatusForm($taskId, $listId, $status, $isRecurring) {
     $html = '<form action="/tasks/update-status" method="post" class="d-inline">';
     $html .= '<input type="hidden" name="id" value="' . $taskId . '">';
     $html .= '<input type="hidden" name="list_id" value="' . $listId . '">';
+    if ($inboxId) {
+        $html .= '<input type="hidden" name="inbox_id" value="' . $inboxId . '">';
+    }
     $html .= '<select name="status" class="form-select form-select-sm" onchange="this.form.submit()">';
 
     foreach ($options as $value => $label) {
@@ -129,7 +132,7 @@ function getTaskStatusForm($taskId, $listId, $status, $isRecurring) {
                                 <?php endif; ?>
 
                                 <div class="ms-2 d-inline-block">
-                                    <?= getTaskStatusForm($task['id'], $task['list_id'], $task['status'], $task['is_one_time'] == 0) ?>
+                                    <?= getTaskStatusForm($task['id'], $task['list_id'], $task['status'], $task['is_one_time'] == 0, $task['inbox_id'] ?? null) ?>
                                 </div>
                             </div>
                         </div>

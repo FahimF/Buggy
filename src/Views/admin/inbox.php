@@ -1,8 +1,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Inbox Items</h2>
-    <form action="/admin/inbox/clear-read" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete ALL read inbox items? This action cannot be undone.');">
+    <form action="/admin/inbox/clear-completed" method="post" class="d-inline" onsubmit="return confirm('Are you sure you want to delete ALL completed/ND/WND inbox items? This action cannot be undone.');">
         <button type="submit" class="btn btn-outline-danger">
-            <i class="bi bi-trash"></i> Remove All Read Items
+            <i class="bi bi-trash"></i> Remove All Completed Items
         </button>
     </form>
 </div>
@@ -25,7 +25,7 @@
                                 <th>ID</th>
                                 <th>User</th>
                                 <th>Task</th>
-                                <th>Read Status</th>
+                                <th>Status</th>
                                 <th>Created At</th>
                                 <th>Due At</th>
                             </tr>
@@ -52,11 +52,17 @@
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($item['is_read']): ?>
-                                        <span class="badge bg-success">Read</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-warning text-dark">Unread</span>
-                                    <?php endif; ?>
+                                    <?php
+                                    $statusClass = '';
+                                    $status = $item['status'] ?? ($item['is_read'] ? 'completed' : 'incomplete');
+                                    switch ($status) {
+                                        case 'completed': $statusClass = 'success'; break;
+                                        case 'ND': $statusClass = 'secondary'; break;
+                                        case 'WND': $statusClass = 'dark'; break;
+                                        default: $statusClass = 'warning text-dark'; break;
+                                    }
+                                    ?>
+                                    <span class="badge bg-<?= $statusClass ?>"><?= htmlspecialchars(ucfirst($status)) ?></span>
                                 </td>
                                 <td><?= date('M j, Y g:i A', strtotime($item['created_at'])) ?></td>
                                 <td>

@@ -80,9 +80,13 @@ function getStatusBadgeClass($status) {
                             Tasks
                             <?php
                             if (Auth::user()) {
-                                $db = Database::connect();
-                                $userId = (int)Auth::user()['id'];
-                                $incompleteCount = $db->query("SELECT COUNT(*) as count FROM user_inbox ui JOIN tasks t ON ui.task_id = t.id WHERE ui.user_id = $userId AND ui.is_read = 0 AND t.status = 'incomplete'")->fetch()['count'];
+                                try {
+                                    $db = Database::connect();
+                                    $userId = Auth::user()['id'];
+                                    $incompleteCount = $db->query("SELECT COUNT(*) as count FROM user_inbox ui WHERE ui.user_id = $userId AND ui.status = 'incomplete'")->fetch()['count'];
+                                } catch (Exception $e) {
+                                    $incompleteCount = 0;
+                                }
                                 if ($incompleteCount > 0) {
                                     echo '<span class="badge bg-danger">' . $incompleteCount . '</span>';
                                 }
