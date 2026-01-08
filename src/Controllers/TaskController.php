@@ -109,7 +109,7 @@ class TaskController {
 
         // Fetch all tasks in this list
         $sql = "
-            SELECT t.*, u.username as assigned_to_name
+            SELECT t.*, u.username as assigned_to_name, u.timezone as assignee_timezone
             FROM tasks t
             LEFT JOIN users u ON t.assigned_to_id = u.id
             WHERE t.list_id = ?
@@ -125,8 +125,9 @@ class TaskController {
             if ($tasks[$i]['is_one_time'] == 1) {
                 $tasks[$i]['next_occurrence'] = 'Now';
             } else {
-                $now = new DateTime();
-                $startDate = new DateTime($tasks[$i]['start_date'] ?? date('Y-m-d H:i:s'));
+                $assigneeTimezone = new DateTimeZone($tasks[$i]['assignee_timezone'] ?? 'UTC');
+                $now = new DateTime('now', $assigneeTimezone);
+                $startDate = new DateTime($tasks[$i]['start_date'] ?? date('Y-m-d H:i:s'), $assigneeTimezone);
 
                 // If start date is in the future, return that date
                 if ($startDate > $now) {
@@ -142,7 +143,7 @@ class TaskController {
                     $lastAddedStmt->execute([$tasks[$i]['id']]);
                     $lastAddedResult = $lastAddedStmt->fetch();
 
-                    $lastAdded = $lastAddedResult['last_added'] ? new DateTime($lastAddedResult['last_added']) : $startDate;
+                    $lastAdded = $lastAddedResult['last_added'] ? new DateTime($lastAddedResult['last_added'], $assigneeTimezone) : $startDate;
 
                     // Calculate next due date based on recurrence
                     $nextDue = clone $lastAdded;
@@ -501,8 +502,13 @@ class TaskController {
     }
 
     private function calculateNextOccurrence($db, $taskId) {
-        // Get task details
-        $taskSql = "SELECT * FROM tasks WHERE id = ?";
+        // Get task details with assignee timezone
+        $taskSql = "
+            SELECT t.*, u.timezone as assignee_timezone 
+            FROM tasks t 
+            LEFT JOIN users u ON t.assigned_to_id = u.id 
+            WHERE t.id = ?
+        ";
         $taskStmt = $db->prepare($taskSql);
         $taskStmt->execute([$taskId]);
         $task = $taskStmt->fetch();
@@ -511,8 +517,9 @@ class TaskController {
             return null; // One-time tasks have null due_at
         }
 
-        $now = new DateTime();
-        $startDate = new DateTime($task['start_date'] ?? date('Y-m-d H:i:s'));
+        $assigneeTimezone = new DateTimeZone($task['assignee_timezone'] ?? 'UTC');
+        $now = new DateTime('now', $assigneeTimezone);
+        $startDate = new DateTime($task['start_date'] ?? date('Y-m-d H:i:s'), $assigneeTimezone);
 
         // If start date is in the future, return that date
         if ($startDate > $now) {
@@ -530,9 +537,9 @@ class TaskController {
         $lastAddedResult = $lastAddedStmt->fetch();
 
         if ($lastAddedResult['last_added']) {
-            $lastAdded = new DateTime($lastAddedResult['last_added']);
+            $lastAdded = new DateTime($lastAddedResult['last_added'], $assigneeTimezone);
             $nextDue = clone $lastAdded;
-
+            
             switch ($task['recurring_period']) {
                 case 'daily':
                     $nextDue->modify('+1 day');

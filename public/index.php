@@ -18,6 +18,34 @@ spl_autoload_register(function ($class_name) {
     }
 });
 
+// Detect and set system timezone
+$systemTimezone = 'UTC';
+if (is_link('/etc/localtime')) {
+    // Mac/Linux: Resolve /etc/localtime symlink
+    $filename = readlink('/etc/localtime');
+    if (strpos($filename, '/usr/share/zoneinfo/') !== false) {
+        $systemTimezone = substr($filename, strpos($filename, '/usr/share/zoneinfo/') + 20);
+    } elseif (strpos($filename, '/var/db/timezone/zoneinfo/') !== false) {
+         // Some macOS versions
+        $systemTimezone = substr($filename, strpos($filename, '/var/db/timezone/zoneinfo/') + 25);
+    }
+} else {
+    // Fallback: Try to get from shell
+    $tz = trim(shell_exec('date +%Z'));
+    // Note: %Z returns abbreviation (EST), which isn't always a valid identifier for DateTimeZone.
+    // %z returns offset (-0500).
+    // Better to stick to UTC if we can't get a proper Region/City identifier,
+    // or rely on PHP's internal guess if valid.
+    if (date_default_timezone_get() !== 'UTC') {
+        $systemTimezone = date_default_timezone_get();
+    }
+}
+// Validate timezone
+if (!in_array($systemTimezone, DateTimeZone::listIdentifiers())) {
+    $systemTimezone = 'UTC'; 
+}
+date_default_timezone_set($systemTimezone);
+
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 

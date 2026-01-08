@@ -36,11 +36,11 @@ class Auth {
         }
     }
 
-    public static function register($username, $password, $isAdmin = 0, $email = null) {
+    public static function register($username, $password, $isAdmin = 0, $email = null, $timezone = 'UTC') {
         $db = Database::connect();
         $hash = password_hash($password, PASSWORD_DEFAULT);
-        $stmt = $db->prepare("INSERT INTO users (username, password_hash, is_admin, email) VALUES (?, ?, ?, ?)");
-        return $stmt->execute([$username, $hash, $isAdmin, $email]);
+        $stmt = $db->prepare("INSERT INTO users (username, password_hash, is_admin, email, timezone) VALUES (?, ?, ?, ?, ?)");
+        return $stmt->execute([$username, $hash, $isAdmin, $email, $timezone]);
     }
     
     public static function hasUsers() {

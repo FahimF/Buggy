@@ -36,6 +36,7 @@
                             data-id="<?= $u['id'] ?>" 
                             data-username="<?= htmlspecialchars($u['username']) ?>" 
                             data-email="<?= htmlspecialchars($u['email'] ?? '') ?>"
+                            data-timezone="<?= htmlspecialchars($u['timezone'] ?? 'UTC') ?>"
                             data-is-admin="<?= $u['is_admin'] ?>">
                         <i class="bi bi-pencil"></i>
                     </button>
@@ -72,6 +73,14 @@
                     <div class="mb-3">
                         <label class="form-label">Email</label>
                         <input type="email" name="email" class="form-control" placeholder="user@example.com">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Timezone</label>
+                        <select name="timezone" class="form-select">
+                            <?php foreach (DateTimeZone::listIdentifiers() as $tz): ?>
+                                <option value="<?= $tz ?>" <?= $tz === 'UTC' ? 'selected' : '' ?>><?= $tz ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Password</label>
@@ -111,6 +120,14 @@
                         <input type="email" name="email" id="editEmail" class="form-control" placeholder="user@example.com">
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Timezone</label>
+                        <select name="timezone" id="editTimezone" class="form-select">
+                            <?php foreach (DateTimeZone::listIdentifiers() as $tz): ?>
+                                <option value="<?= $tz ?>"><?= $tz ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Password</label>
                         <input type="password" name="password" class="form-control" placeholder="Leave blank to keep current">
                     </div>
@@ -137,11 +154,13 @@ document.addEventListener('DOMContentLoaded', function() {
             var id = this.getAttribute('data-id');
             var username = this.getAttribute('data-username');
             var email = this.getAttribute('data-email');
+            var timezone = this.getAttribute('data-timezone');
             var isAdmin = this.getAttribute('data-is-admin') == '1';
             
             document.getElementById('editUserId').value = id;
             document.getElementById('editUsername').value = username;
             document.getElementById('editEmail').value = email;
+            document.getElementById('editTimezone').value = timezone || 'UTC';
             document.getElementById('editIsAdmin').checked = isAdmin;
             
             editModal.show();

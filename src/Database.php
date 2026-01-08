@@ -26,6 +26,7 @@ class Database {
                 email TEXT,
                 password_hash TEXT NOT NULL,
                 is_admin INTEGER DEFAULT 0,
+                timezone TEXT DEFAULT 'UTC',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )",
             "CREATE TABLE IF NOT EXISTS projects (
@@ -156,6 +157,12 @@ class Database {
 
         try {
             self::$pdo->exec("ALTER TABLE users ADD COLUMN email TEXT");
+        } catch (PDOException $e) {
+            // Column likely already exists
+        }
+
+        try {
+            self::$pdo->exec("ALTER TABLE users ADD COLUMN timezone TEXT DEFAULT 'UTC'");
         } catch (PDOException $e) {
             // Column likely already exists
         }

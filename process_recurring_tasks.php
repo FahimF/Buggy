@@ -9,13 +9,15 @@ require_once __DIR__ . '/src/Logger.php';
 // Function to process recurring tasks
 function processRecurringTasks() {
     $db = Database::connect();
+
     
     // 1. Process Recurring Tasks
     // Get all recurring tasks that should be added to inbox based on their schedule
     $sql = "
-        SELECT t.*, tl.owner_id as list_owner_id
+        SELECT t.*, tl.owner_id as list_owner_id, u.timezone as assignee_timezone
         FROM tasks t
         JOIN task_lists tl ON t.list_id = tl.id
+        LEFT JOIN users u ON t.assigned_to_id = u.id
         WHERE t.is_one_time = 0 
         AND t.start_date IS NOT NULL
         AND t.status = 'incomplete'
@@ -78,26 +80,14 @@ function processRecurringTasks() {
     }
 }
 
-// Helper to get system timezone
-function getSystemTimezone() {
-    try {
-        $offset = trim(shell_exec("date +%z"));
-        if ($offset) {
-            return new DateTimeZone($offset);
-        }
-    } catch (Exception $e) {
-        // Fallback to default
-    }
-    return null;
-}
 
 // Helper function to determine if a recurring task should be added to inbox
 function shouldAddRecurringTask($db, $task) {
-    $tz = getSystemTimezone();
-    $now = $tz ? new DateTime("now", $tz) : new DateTime();
+    $assigneeTimezone = new DateTimeZone($task['assignee_timezone'] ?? 'UTC');
+    $now = new DateTime('now', $assigneeTimezone);
     $todayStr = $now->format('Y-m-d');
     
-    $startDate = new DateTime($task['start_date']);
+    $startDate = new DateTime($task['start_date'], $assigneeTimezone);
     $startDayStr = $startDate->format('Y-m-d');
     
     // If start date is in the future day, don't add yet
@@ -117,10 +107,7 @@ function shouldAddRecurringTask($db, $task) {
     $lastAddedResult = $lastAddedStmt->fetch();
     
     if ($lastAddedResult['last_added']) {
-        $lastAdded = new DateTime($lastAddedResult['last_added']);
-        // If we have a system timezone, assume the DB timestamps were stored in it or convert?
-        // Actually, let's keep it simple: Compare Y-m-d strings.
-        // We need to calculate the *next due date* and compare that string to today's string.
+        $lastAdded = new DateTime($lastAddedResult['last_added'], $assigneeTimezone);
         
         $nextDue = clone $lastAdded;
         
@@ -149,8 +136,13 @@ function shouldAddRecurringTask($db, $task) {
 
 // Helper function to calculate next occurrence for a specific task
 function calculateNextOccurrenceForTask($db, $taskId) {
-    // Get task details
-    $taskSql = "SELECT * FROM tasks WHERE id = ?";
+    // Get task details with assignee timezone
+    $taskSql = "
+        SELECT t.*, u.timezone as assignee_timezone 
+        FROM tasks t 
+        LEFT JOIN users u ON t.assigned_to_id = u.id 
+        WHERE t.id = ?
+    ";
     $taskStmt = $db->prepare($taskSql);
     $taskStmt->execute([$taskId]);
     $task = $taskStmt->fetch();
@@ -159,8 +151,9 @@ function calculateNextOccurrenceForTask($db, $taskId) {
         return null; // One-time tasks have null due_at
     }
 
-    $now = new DateTime();
-    $startDate = new DateTime($task['start_date'] ?? date('Y-m-d H:i:s'));
+    $assigneeTimezone = new DateTimeZone($task['assignee_timezone'] ?? 'UTC');
+    $now = new DateTime('now', $assigneeTimezone);
+    $startDate = new DateTime($task['start_date'] ?? date('Y-m-d H:i:s'), $assigneeTimezone);
 
     // If start date is in the future, return that date
     if ($startDate > $now) {
@@ -178,7 +171,7 @@ function calculateNextOccurrenceForTask($db, $taskId) {
     $lastAddedResult = $lastAddedStmt->fetch();
 
     if ($lastAddedResult['last_added']) {
-        $lastAdded = new DateTime($lastAddedResult['last_added']);
+        $lastAdded = new DateTime($lastAddedResult['last_added'], $assigneeTimezone);
         $nextDue = clone $lastAdded;
 
         switch ($task['recurring_period']) {

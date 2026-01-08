@@ -157,6 +157,7 @@ class AdminController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $username = $_POST['username'];
             $email = !empty($_POST['email']) ? $_POST['email'] : null;
+            $timezone = $_POST['timezone'] ?? 'UTC';
             $password = $_POST['password'];
             $isAdmin = isset($_POST['is_admin']) ? 1 : 0;
 
@@ -176,7 +177,7 @@ class AdminController {
                 die("Username already exists");
             }
 
-            Auth::register($username, $password, $isAdmin, $email);
+            Auth::register($username, $password, $isAdmin, $email, $timezone);
             Logger::log('User Created', "Created user: $username");
             header('Location: /admin/users');
         }
@@ -187,6 +188,7 @@ class AdminController {
             $userId = $_POST['user_id'];
             $username = $_POST['username'];
             $email = !empty($_POST['email']) ? $_POST['email'] : null;
+            $timezone = $_POST['timezone'] ?? 'UTC';
             $password = $_POST['password'];
             $isAdmin = isset($_POST['is_admin']) ? 1 : 0;
 
@@ -209,11 +211,11 @@ class AdminController {
 
             if (!empty($password)) {
                 $hash = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $db->prepare("UPDATE users SET username = ?, email = ?, password_hash = ?, is_admin = ? WHERE id = ?");
-                $stmt->execute([$username, $email, $hash, $isAdmin, $userId]);
+                $stmt = $db->prepare("UPDATE users SET username = ?, email = ?, timezone = ?, password_hash = ?, is_admin = ? WHERE id = ?");
+                $stmt->execute([$username, $email, $timezone, $hash, $isAdmin, $userId]);
             } else {
-                $stmt = $db->prepare("UPDATE users SET username = ?, email = ?, is_admin = ? WHERE id = ?");
-                $stmt->execute([$username, $email, $isAdmin, $userId]);
+                $stmt = $db->prepare("UPDATE users SET username = ?, email = ?, timezone = ?, is_admin = ? WHERE id = ?");
+                $stmt->execute([$username, $email, $timezone, $isAdmin, $userId]);
             }
 
             Logger::log('User Updated', "Updated user ID: $userId");
