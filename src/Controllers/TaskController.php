@@ -134,7 +134,7 @@ class TaskController {
                 } else {
                     // Check the last time this specific task was added to the inbox
                     $lastAddedSql = "
-                        SELECT MAX(ui.created_at) as last_added
+                        SELECT MAX(ui.due_at) as last_added
                         FROM user_inbox ui
                         WHERE ui.task_id = ?
                     ";
@@ -147,22 +147,26 @@ class TaskController {
                     // Calculate next due date based on recurrence
                     $nextDue = clone $lastAdded;
 
-                    switch ($tasks[$i]['recurring_period']) {
-                        case 'daily':
-                            $nextDue->modify('+1 day');
-                            break;
-                        case 'weekly':
-                            $nextDue->modify('+1 week');
-                            break;
-                        case 'monthly':
-                            $nextDue->modify('+1 month');
-                            break;
-                        case 'yearly':
-                            $nextDue->modify('+1 year');
-                            break;
-                        default:
-                            $tasks[$i]['next_occurrence'] = 'Now';
-                            continue 2; // Continue the for loop
+                    // Loop until we find an occurrence that is in the future relative to now
+                    // This handles cases where we want to see the *next* due date if the current one is passed
+                    // or the *current* due date if it hasn't passed yet.
+                    while ($nextDue <= $now) {
+                        switch ($tasks[$i]['recurring_period']) {
+                            case 'daily':
+                                $nextDue->modify('+1 day');
+                                break;
+                            case 'weekly':
+                                $nextDue->modify('+1 week');
+                                break;
+                            case 'monthly':
+                                $nextDue->modify('+1 month');
+                                break;
+                            case 'yearly':
+                                $nextDue->modify('+1 year');
+                                break;
+                            default:
+                                break 2; // Break out of switch and while
+                        }
                     }
 
                     $tasks[$i]['next_occurrence'] = $nextDue->format('M j, Y g:i A');
@@ -415,28 +419,19 @@ class TaskController {
 
         foreach ($recurringTasks as $task) {
             // Determine if we should add this task to the inbox based on recurrence rules
-            $shouldAdd = $this->shouldAddRecurringTask($db, $task);
-
-            if ($shouldAdd) {
-                // Check if this exact task instance was already added to inbox today
-                $checkSql = "
-                    SELECT COUNT(*) as count
-                    FROM user_inbox ui
-                    JOIN tasks t2 ON ui.task_id = t2.id
-                    WHERE t2.list_id = ? AND t2.title = ? AND DATE(ui.created_at) = DATE(?)
-                ";
-                $checkStmt = $db->prepare($checkSql);
-                $checkStmt->execute([$task['list_id'], $task['title'], date('Y-m-d H:i:s')]);
-                $result = $checkStmt->fetch();
-
-                if ($result['count'] == 0) {
-                    // Calculate due_at for recurring task
-                    $dueAt = $this->calculateNextOccurrence($db, $task['id']);
+            // Use a loop to backfill multiple missing occurrences if necessary
+            while ($this->shouldAddRecurringTask($db, $task)) {
+                // Calculate due_at for recurring task
+                $dueAt = $this->calculateNextOccurrence($db, $task['id']);
+                
+                if ($dueAt) {
                     // Add to user's inbox
                     $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at) VALUES (?, ?, ?)");
                     $inboxStmt->execute([$task['assigned_to_id'], $task['id'], $dueAt]);
 
-                    Logger::log('Recurring Task Added to Inbox', "Task ID: {$task['id']}, User ID: {$task['assigned_to_id']}");
+                    Logger::log('Recurring Task Added to Inbox', "Task ID: {$task['id']}, User ID: {$task['assigned_to_id']}, Due: {$dueAt}");
+                } else {
+                    break;
                 }
             }
         }
@@ -453,7 +448,7 @@ class TaskController {
 
         // Check the last time this task was added to the inbox
         $lastAddedSql = "
-            SELECT MAX(ui.created_at) as last_added
+            SELECT MAX(ui.due_at) as last_added
             FROM user_inbox ui
             JOIN tasks t2 ON ui.task_id = t2.id
             WHERE t2.list_id = ? AND t2.title = ?
@@ -509,7 +504,7 @@ class TaskController {
 
         // Check the last time this specific task was added to the inbox
         $lastAddedSql = "
-            SELECT MAX(ui.created_at) as last_added
+            SELECT MAX(ui.due_at) as last_added
             FROM user_inbox ui
             WHERE ui.task_id = ?
         ";

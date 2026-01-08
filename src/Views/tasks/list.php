@@ -29,7 +29,7 @@
                                     <th>Priority</th>
                                     <th>Type</th>
                                     <th>Status</th>
-                                    <th>Due</th>
+                                    <th>Next Due</th>
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>

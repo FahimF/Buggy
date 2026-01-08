@@ -27,29 +27,27 @@ function processRecurringTasks() {
 
     foreach ($recurringTasks as $task) {
         // Determine if we should add this task to the inbox based on recurrence rules
-        $shouldAdd = shouldAddRecurringTask($db, $task);
-        
-        if ($shouldAdd) {
+        // Use a loop to backfill multiple missing occurrences if necessary
+        while (shouldAddRecurringTask($db, $task)) {
             // Check if this exact task instance was already added to inbox today
-            $checkSql = "
-                SELECT COUNT(*) as count
-                FROM user_inbox ui
-                JOIN tasks t2 ON ui.task_id = t2.id
-                WHERE t2.list_id = ? AND t2.title = ? AND DATE(ui.created_at) = DATE(?)
-            ";
-            $checkStmt = $db->prepare($checkSql);
-            $checkStmt->execute([$task['list_id'], $task['title'], date('Y-m-d H:i:s')]);
-            $result = $checkStmt->fetch();
+            // Note: When backfilling, we might be adding tasks for previous days,
+            // so checking against DATE(NOW) might prevent valid backfilling if we strictly enforced it.
+            // However, calculateNextOccurrenceForTask relies on the DB state (MAX due_at).
+            // So we rely on that to ensure we don't add duplicates for the same due date.
             
-            if ($result['count'] == 0) {
-                // Calculate due_at for recurring task
-                $dueAt = calculateNextOccurrenceForTask($db, $task['id']);
+            // Calculate due_at for recurring task
+            $dueAt = calculateNextOccurrenceForTask($db, $task['id']);
+            
+            if ($dueAt) {
                 // Add to user's inbox
                 $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at) VALUES (?, ?, ?)");
                 $inboxStmt->execute([$task['assigned_to_id'], $task['id'], $dueAt]);
 
                 // Log the action
-                Logger::log('Recurring Task Added to Inbox', "Task ID: {$task['id']}, User ID: {$task['assigned_to_id']}");
+                Logger::log('Recurring Task Added to Inbox', "Task ID: {$task['id']}, User ID: {$task['assigned_to_id']}, Due: {$dueAt}");
+            } else {
+                // Should not happen if shouldAddRecurringTask is true, but break safety
+                break;
             }
         }
     }
@@ -109,7 +107,7 @@ function shouldAddRecurringTask($db, $task) {
     
     // Check the last time this task was added to the inbox
     $lastAddedSql = "
-        SELECT MAX(ui.created_at) as last_added
+        SELECT MAX(ui.due_at) as last_added
         FROM user_inbox ui
         JOIN tasks t2 ON ui.task_id = t2.id
         WHERE t2.list_id = ? AND t2.title = ?
@@ -171,7 +169,7 @@ function calculateNextOccurrenceForTask($db, $taskId) {
 
     // Check the last time this specific task was added to the inbox
     $lastAddedSql = "
-        SELECT MAX(ui.created_at) as last_added
+        SELECT MAX(ui.due_at) as last_added
         FROM user_inbox ui
         WHERE ui.task_id = ?
     ";

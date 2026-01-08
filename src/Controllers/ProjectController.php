@@ -39,8 +39,7 @@ class ProjectController {
             JOIN task_lists tl ON t.list_id = tl.id
             LEFT JOIN users u ON tl.owner_id = u.id
             WHERE ui.user_id = ? AND t.status = 'incomplete'
-            GROUP BY t.id
-            ORDER BY t.created_at DESC
+            ORDER BY ui.due_at ASC, t.created_at DESC
         ";
 
         $taskStmt = $db->prepare($taskSql);
