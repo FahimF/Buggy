@@ -10,7 +10,7 @@
                     <?php if (!isset($project)): ?>
                         <div class="mb-3">
                             <label>Project</label>
-                            <select name="project_id" class="form-select" required>
+                            <select name="project_id" id="createIssueProjectId" class="form-select" required>
                                 <option value="">-- Select Project --</option>
                                 <?php foreach ($projects as $p): ?>
                                     <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
@@ -18,7 +18,7 @@
                             </select>
                         </div>
                     <?php else: ?>
-                        <input type="hidden" name="project_id" value="<?= $project['id'] ?>">
+                        <input type="hidden" name="project_id" id="createIssueProjectId" value="<?= $project['id'] ?>">
                     <?php endif; ?>
                     <div class="mb-3">
                         <label>Title</label>
