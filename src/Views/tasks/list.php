@@ -66,7 +66,7 @@
                                         <?php if ($task['is_one_time'] == 1): ?>
                                             <span class="badge bg-secondary">One-time</span>
                                         <?php else: ?>
-                                            <span class="badge bg-info">Recurring (<?= ucfirst($task['recurring_period']) ?>)</span>
+                                            <span class="badge bg-info">Recurring (Every <?= $task['recurring_value'] ?? 1 ?> <?= ucfirst($task['recurring_period']) ?>(s))</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
@@ -106,6 +106,7 @@
                                                     data-priority="<?= $task['priority'] ?>"
                                                     data-is-one-time="<?= $task['is_one_time'] ?>"
                                                     data-recurring-period="<?= $task['recurring_period'] ?>"
+                                                    data-recurring-value="<?= $task['recurring_value'] ?? 1 ?>"
                                                     data-start-date="<?= $task['start_date'] ?>"
                                                     data-status="<?= $task['status'] ?>"
                                                     title="Edit">
@@ -195,6 +196,11 @@
                                     <option value="monthly">Monthly</option>
                                     <option value="yearly">Yearly</option>
                                 </select>
+                            </div>
+
+                            <div class="mb-3 recurring-options" style="display: none;">
+                                <label>Recurring Value</label>
+                                <input type="number" name="recurring_value" class="form-control" value="1" min="1">
                             </div>
                             
                             <div class="mb-3 recurring-options" style="display: none;">
@@ -286,6 +292,11 @@
                                     <option value="yearly">Yearly</option>
                                 </select>
                             </div>
+
+                            <div class="mb-3 recurring-options-edit">
+                                <label>Recurring Value</label>
+                                <input type="number" name="recurring_value" id="editRecurringValue" class="form-control" min="1">
+                            </div>
                             
                             <div class="mb-3 recurring-options-edit">
                                 <label>Start Date/Time</label>
@@ -331,6 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var priority = this.getAttribute('data-priority');
             var isOneTime = this.getAttribute('data-is-one-time');
             var recurringPeriod = this.getAttribute('data-recurring-period');
+            var recurringValue = this.getAttribute('data-recurring-value');
             var startDate = this.getAttribute('data-start-date');
             var status = this.getAttribute('data-status');
 
@@ -350,6 +362,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             document.getElementById('editRecurringPeriod').value = recurringPeriod || 'daily';
+            document.getElementById('editRecurringValue').value = recurringValue || 1;
             document.getElementById('editStartDate').value = startDate || '';
 
             // Show the modal

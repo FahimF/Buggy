@@ -96,6 +96,7 @@ class Database {
                 priority TEXT DEFAULT 'Medium',
                 is_one_time INTEGER DEFAULT 1,
                 recurring_period TEXT, -- daily, weekly, monthly, yearly
+                recurring_value INTEGER DEFAULT 1,
                 start_date DATETIME,
                 status TEXT DEFAULT 'incomplete', -- incomplete, completed, ND, WND
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -206,6 +207,7 @@ class Database {
                 priority TEXT DEFAULT 'Medium',
                 is_one_time INTEGER DEFAULT 1,
                 recurring_period TEXT, -- daily, weekly, monthly, yearly
+                recurring_value INTEGER DEFAULT 1,
                 start_date DATETIME,
                 status TEXT DEFAULT 'incomplete', -- incomplete, completed, ND, WND
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -254,6 +256,13 @@ class Database {
                 AND is_read = 1
             ";
             self::$pdo->exec($sql);
+        } catch (PDOException $e) {
+            // Column likely already exists
+        }
+
+        // Migration for recurring_value column in tasks table
+        try {
+            self::$pdo->exec("ALTER TABLE tasks ADD COLUMN recurring_value INTEGER DEFAULT 1");
         } catch (PDOException $e) {
             // Column likely already exists
         }

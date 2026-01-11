@@ -73,7 +73,23 @@ function getStatusBadgeClass($status) {
             <div class="collapse navbar-collapse">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/projects">Projects</a>
+                        <a class="nav-link" href="/projects">
+                            Projects
+                            <?php
+                            if (Auth::user()) {
+                                try {
+                                    $db = Database::connect();
+                                    $userId = Auth::user()['id'];
+                                    $issueCount = $db->query("SELECT COUNT(*) as count FROM issues WHERE assigned_to_id = $userId AND status NOT IN ('Completed', 'WND')")->fetch()['count'];
+                                } catch (Exception $e) {
+                                    $issueCount = 0;
+                                }
+                                if ($issueCount > 0) {
+                                    echo '<span class="badge bg-secondary ms-1">' . $issueCount . '</span>';
+                                }
+                            }
+                            ?>
+                        </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/tasks">

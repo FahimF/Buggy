@@ -152,18 +152,19 @@ class TaskController {
                     // This handles cases where we want to see the *next* due date if the current one is passed
                     // or the *current* due date if it hasn't passed yet.
                     while ($nextDue <= $now) {
+                        $recurringValue = $tasks[$i]['recurring_value'] ?? 1;
                         switch ($tasks[$i]['recurring_period']) {
                             case 'daily':
-                                $nextDue->modify('+1 day');
+                                $nextDue->modify('+' . $recurringValue . ' day');
                                 break;
                             case 'weekly':
-                                $nextDue->modify('+1 week');
+                                $nextDue->modify('+' . $recurringValue . ' week');
                                 break;
                             case 'monthly':
-                                $nextDue->modify('+1 month');
+                                $nextDue->modify('+' . $recurringValue . ' month');
                                 break;
                             case 'yearly':
-                                $nextDue->modify('+1 year');
+                                $nextDue->modify('+' . $recurringValue . ' year');
                                 break;
                             default:
                                 break 2; // Break out of switch and while
@@ -191,6 +192,7 @@ class TaskController {
             $priority = $_POST['priority'] ?? 'Medium';
             $isOneTime = isset($_POST['is_one_time']) ? 1 : 0;
             $recurringPeriod = $_POST['recurring_period'] ?? null;
+            $recurringValue = $_POST['recurring_value'] ?? 1;
             $startDate = $_POST['start_date'] ?? null;
 
             $db = Database::connect();
@@ -207,10 +209,10 @@ class TaskController {
             }
 
             $stmt = $db->prepare("
-                INSERT INTO tasks (list_id, title, description, assigned_to_id, priority, is_one_time, recurring_period, start_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tasks (list_id, title, description, assigned_to_id, priority, is_one_time, recurring_period, recurring_value, start_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$listId, $title, $description, $assignedToId, $priority, $isOneTime, $recurringPeriod, $startDate]);
+            $stmt->execute([$listId, $title, $description, $assignedToId, $priority, $isOneTime, $recurringPeriod, $recurringValue, $startDate]);
 
             $taskId = $db->lastInsertId();
 
@@ -242,6 +244,7 @@ class TaskController {
             $priority = $_POST['priority'] ?? 'Medium';
             $isOneTime = isset($_POST['is_one_time']) ? 1 : 0;
             $recurringPeriod = $_POST['recurring_period'] ?? null;
+            $recurringValue = $_POST['recurring_value'] ?? 1;
             $startDate = $_POST['start_date'] ?? null;
             $status = $_POST['status'] ?? 'incomplete';
 
@@ -261,10 +264,10 @@ class TaskController {
             $stmt = $db->prepare("
                 UPDATE tasks
                 SET title = ?, description = ?, assigned_to_id = ?, priority = ?,
-                    is_one_time = ?, recurring_period = ?, start_date = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+                    is_one_time = ?, recurring_period = ?, recurring_value = ?, start_date = ?, status = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             ");
-            $stmt->execute([$title, $description, $assignedToId, $priority, $isOneTime, $recurringPeriod, $startDate, $status, $id]);
+            $stmt->execute([$title, $description, $assignedToId, $priority, $isOneTime, $recurringPeriod, $recurringValue, $startDate, $status, $id]);
 
             Logger::log('Task Updated', "Task ID: $id");
             header('Location: /tasks/list/' . $listId);
@@ -479,19 +482,20 @@ class TaskController {
 
         // Calculate next due date based on recurrence
         $nextDue = clone $lastAdded;
+        $recurringValue = $task['recurring_value'] ?? 1;
 
         switch ($task['recurring_period']) {
             case 'daily':
-                $nextDue->modify('+1 day');
+                $nextDue->modify('+' . $recurringValue . ' day');
                 break;
             case 'weekly':
-                $nextDue->modify('+1 week');
+                $nextDue->modify('+' . $recurringValue . ' week');
                 break;
             case 'monthly':
-                $nextDue->modify('+1 month');
+                $nextDue->modify('+' . $recurringValue . ' month');
                 break;
             case 'yearly':
-                $nextDue->modify('+1 year');
+                $nextDue->modify('+' . $recurringValue . ' year');
                 break;
             default:
                 return false;
@@ -539,19 +543,20 @@ class TaskController {
         if ($lastAddedResult['last_added']) {
             $lastAdded = new DateTime($lastAddedResult['last_added'], $assigneeTimezone);
             $nextDue = clone $lastAdded;
+            $recurringValue = $task['recurring_value'] ?? 1;
             
             switch ($task['recurring_period']) {
                 case 'daily':
-                    $nextDue->modify('+1 day');
+                    $nextDue->modify('+' . $recurringValue . ' day');
                     break;
                 case 'weekly':
-                    $nextDue->modify('+1 week');
+                    $nextDue->modify('+' . $recurringValue . ' week');
                     break;
                 case 'monthly':
-                    $nextDue->modify('+1 month');
+                    $nextDue->modify('+' . $recurringValue . ' month');
                     break;
                 case 'yearly':
-                    $nextDue->modify('+1 year');
+                    $nextDue->modify('+' . $recurringValue . ' year');
                     break;
                 default:
                     return null;

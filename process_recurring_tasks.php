@@ -110,19 +110,20 @@ function shouldAddRecurringTask($db, $task) {
         $lastAdded = new DateTime($lastAddedResult['last_added'], $assigneeTimezone);
         
         $nextDue = clone $lastAdded;
+        $recurringValue = $task['recurring_value'] ?? 1;
         
         switch ($task['recurring_period']) {
             case 'daily':
-                $nextDue->modify('+1 day');
+                $nextDue->modify('+' . $recurringValue . ' day');
                 break;
             case 'weekly':
-                $nextDue->modify('+1 week');
+                $nextDue->modify('+' . $recurringValue . ' week');
                 break;
             case 'monthly':
-                $nextDue->modify('+1 month');
+                $nextDue->modify('+' . $recurringValue . ' month');
                 break;
             case 'yearly':
-                $nextDue->modify('+1 year');
+                $nextDue->modify('+' . $recurringValue . ' year');
                 break;
             default:
                 return false;
@@ -173,19 +174,20 @@ function calculateNextOccurrenceForTask($db, $taskId) {
     if ($lastAddedResult['last_added']) {
         $lastAdded = new DateTime($lastAddedResult['last_added'], $assigneeTimezone);
         $nextDue = clone $lastAdded;
+        $recurringValue = $task['recurring_value'] ?? 1;
 
         switch ($task['recurring_period']) {
             case 'daily':
-                $nextDue->modify('+1 day');
+                $nextDue->modify('+' . $recurringValue . ' day');
                 break;
             case 'weekly':
-                $nextDue->modify('+1 week');
+                $nextDue->modify('+' . $recurringValue . ' week');
                 break;
             case 'monthly':
-                $nextDue->modify('+1 month');
+                $nextDue->modify('+' . $recurringValue . ' month');
                 break;
             case 'yearly':
-                $nextDue->modify('+1 year');
+                $nextDue->modify('+' . $recurringValue . ' year');
                 break;
             default:
                 return null;
