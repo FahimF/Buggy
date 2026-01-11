@@ -1,34 +1,6 @@
 <?php
 require_once __DIR__ . '/../header.php';
 
-function getPriorityBadgeClass($priority) {
-    switch ($priority) {
-        case 'High':
-            return 'bg-danger';
-        case 'Medium':
-            return 'bg-warning text-dark';
-        case 'Low':
-            return 'bg-success';
-        default:
-            return 'bg-secondary';
-    }
-}
-
-function getTypeBadgeClass($type) {
-    switch ($type) {
-        case 'Bug':
-            return 'bg-danger';
-        case 'Feature':
-            return 'bg-primary';
-        case 'Task':
-            return 'bg-info';
-        case 'Improvement':
-            return 'bg-success';
-        default:
-            return 'bg-secondary';
-    }
-}
-
 function getTaskStatusForm($taskId, $listId, $status, $isRecurring, $inboxId = null) {
     // For recurring tasks, don't show WND option since user might do it another day
     if ($isRecurring) {

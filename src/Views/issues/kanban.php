@@ -38,6 +38,9 @@
                             <?php else: ?>
                                 <span class="badge bg-info text-dark rounded-pill" style="font-size: 0.7em;">Feature</span>
                             <?php endif; ?>
+                            <span class="badge <?= getPriorityBadgeClass($issue['priority'] ?? 'Medium') ?> rounded-pill" style="font-size: 0.7em;">
+                                <?= htmlspecialchars($issue['priority'] ?? 'Medium') ?>
+                            </span>
                         </div>
                         <h6 class="card-title">
                             <a href="/issues/<?= $issue['id'] ?>" class="text-decoration-none text-dark"><?= htmlspecialchars($issue['title']) ?></a>

@@ -82,13 +82,7 @@
                             </div>
                         </td>
                         <td>
-                            <?php 
-                            $priorityClass = 'bg-secondary';
-                            if (($issue['priority'] ?? 'Medium') === 'High') $priorityClass = 'bg-danger';
-                            elseif (($issue['priority'] ?? 'Medium') === 'Medium') $priorityClass = 'bg-warning text-dark';
-                            elseif (($issue['priority'] ?? 'Medium') === 'Low') $priorityClass = 'bg-success';
-                            ?>
-                            <span class="badge <?= $priorityClass ?>"><?= htmlspecialchars($issue['priority'] ?? 'Medium') ?></span>
+                            <span class="badge <?= getPriorityBadgeClass($issue['priority'] ?? 'Medium') ?>"><?= htmlspecialchars($issue['priority'] ?? 'Medium') ?></span>
                         </td>
                         <td>
                             <?php if (($issue['type'] ?? 'Bug') === 'Bug'): ?>

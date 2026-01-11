@@ -64,6 +64,34 @@ function getStatusBadgeClass($status) {
             return 'bg-secondary';
     }
 }
+
+function getPriorityBadgeClass($priority) {
+    switch ($priority) {
+        case 'High':
+            return 'bg-danger';
+        case 'Medium':
+            return 'bg-warning text-dark';
+        case 'Low':
+            return 'bg-success';
+        default:
+            return 'bg-secondary';
+    }
+}
+
+function getTypeBadgeClass($type) {
+    switch ($type) {
+        case 'Bug':
+            return 'bg-danger';
+        case 'Feature':
+            return 'bg-primary';
+        case 'Task':
+            return 'bg-info';
+        case 'Improvement':
+            return 'bg-success';
+        default:
+            return 'bg-secondary';
+    }
+}
 ?>
 <body class="bg-light">
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
