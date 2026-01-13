@@ -257,7 +257,7 @@ class ProjectController {
             $stmt->execute([$name, $color, $textColor, $ownerId]);
             
             Logger::log('Project Created', "Project: $name");
-            header('Location: /');
+            header('Location: /projects');
         }
     }
 
@@ -274,7 +274,7 @@ class ProjectController {
             $stmt->execute([$name, $color, $textColor, $id]);
             
             Logger::log('Project Updated', "Project ID: $id");
-            header('Location: /');
+            header('Location: /projects');
         }
     }
 
@@ -287,7 +287,7 @@ class ProjectController {
             $stmt->execute([$id]);
 
             Logger::log('Project Deleted', "Project ID: $id");
-            header('Location: /');
+            header('Location: /projects');
         }
     }
 

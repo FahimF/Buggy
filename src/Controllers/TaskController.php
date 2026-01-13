@@ -315,12 +315,25 @@ class TaskController {
             $db = Database::connect();
             $currentUserId = (int)Auth::user()['id'];
 
-            // Verify that the user owns the list that contains this task
-            $listCheckStmt = $db->prepare("SELECT tl.id, t.assigned_to_id, t.is_one_time FROM task_lists tl JOIN tasks t ON t.list_id = tl.id WHERE t.id = ? AND tl.owner_id = ?");
-            $listCheckStmt->execute([$id, $currentUserId]);
-            $taskInfo = $listCheckStmt->fetch();
+            // Get task info to verify permissions (allow Owner OR Assignee)
+            $stmt = $db->prepare("
+                SELECT t.id, t.title, t.assigned_to_id, t.is_one_time, tl.owner_id 
+                FROM tasks t 
+                JOIN task_lists tl ON t.list_id = tl.id 
+                WHERE t.id = ?
+            ");
+            $stmt->execute([$id]);
+            $taskInfo = $stmt->fetch();
 
             if (!$taskInfo) {
+                // Task not found
+                header('Location: /tasks');
+                exit;
+            }
+
+            // Check permissions: Must be List Owner OR Assigned User
+            if ($taskInfo['owner_id'] !== $currentUserId && $taskInfo['assigned_to_id'] !== $currentUserId) {
+                Logger::log('Unauthorized Task Update', "User $currentUserId attempted to update Task ID: $id without permission.");
                 header('Location: /tasks');
                 exit;
             }
@@ -333,17 +346,39 @@ class TaskController {
             } else {
                 // Fallback (e.g., from Task List view where specific inbox item might not be known)
                 // We update all incomplete inbox items for this task for this user
-                $inboxStmt = $db->prepare("UPDATE user_inbox SET status = ? WHERE task_id = ? AND user_id = ? AND status = 'incomplete'");
-                $inboxStmt->execute([$status, $id, $currentUserId]);
+                // Note: If user is owner but not assignee, they might be updating status for the assignee.
+                // In that case, we should update the assignee's inbox item?
+                // The original logic updated inbox items where user_id = currentUserId.
+                // If I am the owner updating a task assigned to someone else, I probably want to update their inbox item status?
+                // But the original code was: WHERE task_id = ? AND user_id = ?
+                
+                // Let's stick to updating items where the *inbox owner* matches the *current user* for now to be safe,
+                // OR if I am the list owner, maybe I can update any inbox item for this task? 
+                // For simplicity and safety (preventing side effects), let's stick to updating the inbox item 
+                // associated with the current user if they are the assignee.
+                
+                // However, if I am the list owner and I mark a task as 'completed', it should probably mark it for the assignee.
+                // But the system seems designed where 'user_inbox' tracks individual user's view.
+                
+                // Let's refine: If I am the assignee, update my inbox.
+                if ($taskInfo['assigned_to_id'] === $currentUserId) {
+                     $inboxStmt = $db->prepare("UPDATE user_inbox SET status = ? WHERE task_id = ? AND user_id = ? AND status = 'incomplete'");
+                     $inboxStmt->execute([$status, $id, $currentUserId]);
+                }
+                // If I am the owner but NOT the assignee, I might be "closing" the task globally.
+                // But 'user_inbox' is per user.
+                // The original code only updated `user_inbox` where `user_id = $currentUserId`.
+                // We will keep that behavior: You update your own view of the task in the inbox.
             }
 
             // 2. Update Parent Task Status (Only for One-Time Tasks)
+            // This affects the global task status.
             if ($taskInfo['is_one_time'] == 1) {
                 $stmt = $db->prepare("UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
                 $stmt->execute([$status, $id]);
             }
 
-            Logger::log('Task Status Updated', "Task ID: $id, Status: $status");
+            Logger::log('Task Status Updated', "Task: '{$taskInfo['title']}' (ID: $id) marked as '$status' by User ID: $currentUserId");
 
             // If the task is being marked as incomplete from a completed/ND/WND state,
             // and it's a one-time task, we might need to reactivate it.
@@ -362,7 +397,10 @@ class TaskController {
             }
 
             // Redirect appropriately based on context
-            if ($listId) {
+            $redirectTo = $_POST['redirect_to'] ?? null;
+            if ($redirectTo === 'dashboard') {
+                header('Location: /dashboard');
+            } elseif ($listId) {
                 header('Location: /tasks/list/' . $listId);
             } else {
                 header('Location: /dashboard');
@@ -450,7 +488,7 @@ class TaskController {
                     $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at, status) VALUES (?, ?, ?, 'incomplete')");
                     $inboxStmt->execute([$task['assigned_to_id'], $task['id'], $dueAt]);
 
-                    Logger::log('Recurring Task Added to Inbox', "Task ID: {$task['id']}, User ID: {$task['assigned_to_id']}, Due: {$dueAt}");
+                    Logger::log('Recurring Task Generated', "Task: '{$task['title']}' (ID: {$task['id']}) assigned to User ID: {$task['assigned_to_id']}, Due: {$dueAt}");
                 } else {
                     break;
                 }

@@ -21,6 +21,7 @@ function getTaskStatusForm($taskId, $listId, $status, $isRecurring, $inboxId = n
     $html = '<form action="/tasks/update-status" method="post" class="d-inline">';
     $html .= '<input type="hidden" name="id" value="' . $taskId . '">';
     $html .= '<input type="hidden" name="list_id" value="' . $listId . '">';
+    $html .= '<input type="hidden" name="redirect_to" value="dashboard">';
     if ($inboxId) {
         $html .= '<input type="hidden" name="inbox_id" value="' . $inboxId . '">';
     }
