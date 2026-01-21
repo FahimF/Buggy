@@ -1,6 +1,4 @@
 <?php
-session_start();
-
 // Simple Autoloader
 spl_autoload_register(function ($class_name) {
     $paths = [
@@ -17,6 +15,16 @@ spl_autoload_register(function ($class_name) {
         }
     }
 });
+
+// Session Configuration
+ini_set('session.gc_maxlifetime', 1209600);
+ini_set('session.cookie_lifetime', 1209600);
+
+// Register Custom Session Handler
+$handler = new DatabaseSessionHandler();
+session_set_save_handler($handler, true);
+
+session_start();
 
 // Detect and set system timezone
 $systemTimezone = 'UTC';

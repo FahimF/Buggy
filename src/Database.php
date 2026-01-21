@@ -130,6 +130,11 @@ class Database {
                 key TEXT UNIQUE NOT NULL,
                 value TEXT,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )",
+            "CREATE TABLE IF NOT EXISTS sessions (
+                id TEXT PRIMARY KEY,
+                access INTEGER,
+                data TEXT
             )"
         ];
 
@@ -265,6 +270,17 @@ class Database {
             self::$pdo->exec("ALTER TABLE tasks ADD COLUMN recurring_value INTEGER DEFAULT 1");
         } catch (PDOException $e) {
             // Column likely already exists
+        }
+
+        // Migration for sessions table
+        try {
+            self::$pdo->exec("CREATE TABLE sessions (
+                id TEXT PRIMARY KEY,
+                access INTEGER,
+                data TEXT
+            )");
+        } catch (PDOException $e) {
+            // Table likely already exists
         }
     }
 }
