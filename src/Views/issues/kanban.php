@@ -89,6 +89,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ issue_id: issueId, status: newStatus })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error === 'incomplete_subtasks') {
+                        if (confirm('This issue has ' + data.count + ' incomplete sub-task(s). Would you like to mark all sub-tasks as completed and complete the issue?')) {
+                            fetch('/issues/update_status', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ issue_id: issueId, status: newStatus, force_complete_subtasks: true })
+                            })
+                            .then(res => res.json())
+                            .then(retryData => {
+                                if (retryData.success) {
+                                    window.location.reload();
+                                }
+                            });
+                        } else {
+                            window.location.reload();
+                        }
+                    } else if (data.success) {
+                        // Smooth update - optionally reload if assignee changed
+                        // To keep it simple, we do not force reload on normal success.
+                    }
                 });
             }
         });

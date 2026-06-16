@@ -133,7 +133,7 @@ function getTaskStatusForm($taskId, $listId, $status, $isRecurring, $inboxId = n
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <h5 class="card-title">
-                                            <a href="/issues/<?= $issue['id'] ?>/edit" class="text-decoration-none">
+                                            <a href="/issues/<?= $issue['id'] ?>" class="text-decoration-none">
                                                 [<?= htmlspecialchars($issue['project_name']) ?>] <?= htmlspecialchars($issue['title']) ?>
                                             </a>
                                         </h5>

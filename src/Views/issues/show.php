@@ -32,6 +32,14 @@
                 <div class="card-text">
                     <?= $issue['description'] ?> <!-- Assumed safe HTML from Quill, but normally needs sanitization -->
                 </div>
+                
+                <hr>
+                <div class="mt-4">
+                    <h5>Sub-tasks</h5>
+                    <div id="issueSubtasksContainer" class="mb-3">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -144,6 +152,56 @@
             }
             document.getElementById('commentInput').value = html;
         };
+
+    // Sub-tasks Logic (Read-only)
+    const issueId = <?= $issue['id'] ?>;
+
+    function loadSubtasks() {
+        const container = document.getElementById('issueSubtasksContainer');
+        container.innerHTML = '<div class="text-muted small">Loading sub-tasks...</div>';
+
+        fetch('/issues/sub-tasks?issue_id=' + issueId)
+            .then(res => res.json())
+            .then(subtasks => {
+                container.innerHTML = '';
+
+                if (subtasks.length === 0) {
+                    container.innerHTML = '<div class="text-muted small py-1">No sub-tasks.</div>';
+                    return;
+                }
+
+                subtasks.forEach(st => {
+                    const div = document.createElement('div');
+                    div.className = 'd-flex align-items-center border-bottom py-2';
+
+                    const isComp = parseInt(st.is_completed) === 1;
+                    const icon = document.createElement('i');
+                    icon.className = isComp ? 'bi bi-check-square-fill text-success me-2' : 'bi bi-square text-muted me-2';
+
+                    const span = document.createElement('span');
+                    if (isComp) {
+                        span.innerHTML = '<s>' + escapeHtml(st.description) + '</s>';
+                    } else {
+                        span.textContent = st.description;
+                    }
+
+                    div.appendChild(icon);
+                    div.appendChild(span);
+                    container.appendChild(div);
+                });
+            });
+    }
+
+    function escapeHtml(text) {
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    loadSubtasks();
     });
 </script>
 

@@ -67,6 +67,18 @@
                 <div id="editor-container" style="height: 300px;"><?= $issue['description'] ?></div>
                 <input type="hidden" name="description" id="descriptionInput">
             </div>
+            
+            <hr>
+            <div class="mb-4">
+                <h5>Sub-tasks</h5>
+                <div id="issueSubtasksContainer" class="mb-3">
+                    <!-- Loaded dynamically -->
+                </div>
+                <div class="input-group">
+                    <input type="text" id="newSubtaskDesc" class="form-control" placeholder="Add a sub-task...">
+                    <button type="button" class="btn btn-outline-secondary" id="btnAddSubtask">Add Sub-task</button>
+                </div>
+            </div>
 
             <?php
             $referrer = $_SERVER['HTTP_REFERER'] ?? '';
@@ -181,9 +193,147 @@
             });
         });
         
-        document.getElementById('editIssueForm').onsubmit = function() {
+        const form = document.getElementById('editIssueForm');
+        form.onsubmit = function(e) {
             document.getElementById('descriptionInput').value = quill.root.innerHTML;
+            
+            const status = form.querySelector('select[name="status"]').value;
+            const incompleteCount = localIncompleteSubtasksCount;
+            
+            if (status === 'Completed' && incompleteCount > 0) {
+                if (confirm('This issue has ' + incompleteCount + ' incomplete sub-task(s). Would you like to mark all sub-tasks as completed and save changes?')) {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'force_complete_subtasks';
+                    input.value = '1';
+                    form.appendChild(input);
+                } else {
+                    return false;
+                }
+            }
         };
+
+        // Sub-tasks Logic (Edit Mode)
+        const issueId = <?= $issue['id'] ?>;
+        let localIncompleteSubtasksCount = 0;
+
+        function loadSubtasks() {
+            const container = document.getElementById('issueSubtasksContainer');
+            container.innerHTML = '<div class="text-muted small">Loading sub-tasks...</div>';
+
+            fetch('/issues/sub-tasks?issue_id=' + issueId)
+                .then(res => res.json())
+                .then(subtasks => {
+                    container.innerHTML = '';
+                    localIncompleteSubtasksCount = 0;
+
+                    if (subtasks.length === 0) {
+                        container.innerHTML = '<div class="text-muted small py-1">No sub-tasks yet.</div>';
+                        return;
+                    }
+
+                    subtasks.forEach(st => {
+                        if (parseInt(st.is_completed) === 0) {
+                            localIncompleteSubtasksCount++;
+                        }
+
+                        const div = document.createElement('div');
+                        div.className = 'd-flex align-items-center justify-content-between border-bottom py-1';
+
+                        const left = document.createElement('div');
+                        left.className = 'form-check';
+
+                        const chk = document.createElement('input');
+                        chk.type = 'checkbox';
+                        chk.className = 'form-check-input subtask-chk';
+                        chk.checked = parseInt(st.is_completed) === 1;
+                        chk.dataset.id = st.id;
+
+                        const label = document.createElement('label');
+                        label.className = 'form-check-label ms-2';
+                        if (chk.checked) {
+                            label.innerHTML = '<s>' + escapeHtml(st.description) + '</s>';
+                        } else {
+                            label.textContent = st.description;
+                        }
+
+                        left.appendChild(chk);
+                        left.appendChild(label);
+
+                        const btnDel = document.createElement('button');
+                        btnDel.type = 'button';
+                        btnDel.className = 'btn btn-sm text-danger py-0 subtask-del-btn';
+                        btnDel.dataset.id = st.id;
+                        btnDel.innerHTML = '<i class="bi bi-trash"></i>';
+
+                        div.appendChild(left);
+                        div.appendChild(btnDel);
+                        container.appendChild(div);
+
+                        chk.addEventListener('change', function() {
+                            const newStatus = this.checked ? 1 : 0;
+                            fetch('/issues/sub-tasks/toggle', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: st.id, is_completed: newStatus })
+                            })
+                            .then(res => res.json())
+                            .then(() => {
+                                loadSubtasks();
+                            });
+                        });
+
+                        btnDel.addEventListener('click', function() {
+                            if (confirm('Delete this sub-task?')) {
+                                fetch('/issues/sub-tasks/delete', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ id: st.id })
+                                })
+                                .then(res => res.json())
+                                .then(() => {
+                                    loadSubtasks();
+                                });
+                            }
+                        });
+                    });
+                });
+        }
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        document.getElementById('btnAddSubtask').addEventListener('click', function() {
+            const input = document.getElementById('newSubtaskDesc');
+            const desc = input.value.trim();
+            if (!desc) return;
+
+            fetch('/issues/sub-tasks/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ issue_id: issueId, description: desc })
+            })
+            .then(res => res.json())
+            .then(() => {
+                input.value = '';
+                loadSubtasks();
+            });
+        });
+
+        document.getElementById('newSubtaskDesc').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('btnAddSubtask').click();
+            }
+        });
+
+        loadSubtasks();
     });
 </script>
 

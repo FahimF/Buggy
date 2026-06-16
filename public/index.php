@@ -106,6 +106,14 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new IssueController())->create();
 } elseif ($uri === '/issues/update_status') {
     (new IssueController())->updateStatus();
+} elseif ($uri === '/issues/sub-tasks') {
+    (new IssueController())->getSubTasks();
+} elseif ($uri === '/issues/sub-tasks/create') {
+    (new IssueController())->createSubTask();
+} elseif ($uri === '/issues/sub-tasks/toggle') {
+    (new IssueController())->toggleSubTask();
+} elseif ($uri === '/issues/sub-tasks/delete') {
+    (new IssueController())->deleteSubTask();
 } elseif ($uri === '/issues/reorder') {
     (new IssueController())->reorder();
 } elseif (preg_match('#^/issues/(\d+)$#', $uri, $matches)) {

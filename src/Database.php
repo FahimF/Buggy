@@ -135,6 +135,14 @@ class Database {
                 id TEXT PRIMARY KEY,
                 access INTEGER,
                 data TEXT
+            )",
+            "CREATE TABLE IF NOT EXISTS issue_sub_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                issue_id INTEGER NOT NULL,
+                description TEXT NOT NULL,
+                is_completed INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
             )"
         ];
 
@@ -278,6 +286,20 @@ class Database {
                 id TEXT PRIMARY KEY,
                 access INTEGER,
                 data TEXT
+            )");
+        } catch (PDOException $e) {
+            // Table likely already exists
+        }
+
+        // Migration for issue_sub_tasks table
+        try {
+            self::$pdo->exec("CREATE TABLE IF NOT EXISTS issue_sub_tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                issue_id INTEGER NOT NULL,
+                description TEXT NOT NULL,
+                is_completed INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
             )");
         } catch (PDOException $e) {
             // Table likely already exists

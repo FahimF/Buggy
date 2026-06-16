@@ -223,6 +223,10 @@ class IssueController {
         $stmt->execute([$id]);
         $comments = $stmt->fetchAll();
 
+        $incompleteSubtasksStmt = $db->prepare("SELECT COUNT(*) FROM issue_sub_tasks WHERE issue_id = ? AND is_completed = 0");
+        $incompleteSubtasksStmt->execute([$id]);
+        $incompleteSubtasksCount = (int)$incompleteSubtasksStmt->fetchColumn();
+
         require __DIR__ . '/../Views/issues/edit.php';
     }
 
@@ -251,6 +255,20 @@ class IssueController {
                 $newAssignee = $this->getAutoAssignUser($status);
                 if ($newAssignee) {
                     $assignedTo = $newAssignee;
+                }
+            }
+
+            if ($status === 'Completed') {
+                $incompleteSubtasksStmt = $db->prepare("SELECT COUNT(*) FROM issue_sub_tasks WHERE issue_id = ? AND is_completed = 0");
+                $incompleteSubtasksStmt->execute([$id]);
+                $incompleteCount = (int)$incompleteSubtasksStmt->fetchColumn();
+                if ($incompleteCount > 0) {
+                    if (isset($_POST['force_complete_subtasks']) && $_POST['force_complete_subtasks'] == 1) {
+                        $db->prepare("UPDATE issue_sub_tasks SET is_completed = 1 WHERE issue_id = ?")->execute([$id]);
+                    } else {
+                        header('Location: /issues/' . $id . '/edit');
+                        exit;
+                    }
                 }
             }
 
@@ -306,25 +324,45 @@ class IssueController {
         $input = json_decode(file_get_contents('php://input'), true);
         if ($input && isset($input['issue_id']) && isset($input['status'])) {
             $db = Database::connect();
+            $issueId = $input['issue_id'];
+            $status = $input['status'];
+
+            if ($status === 'Completed') {
+                $incompleteSubtasksStmt = $db->prepare("SELECT COUNT(*) FROM issue_sub_tasks WHERE issue_id = ? AND is_completed = 0");
+                $incompleteSubtasksStmt->execute([$issueId]);
+                $incompleteCount = (int)$incompleteSubtasksStmt->fetchColumn();
+                if ($incompleteCount > 0) {
+                    if (isset($input['force_complete_subtasks']) && $input['force_complete_subtasks'] == true) {
+                        $db->prepare("UPDATE issue_sub_tasks SET is_completed = 1 WHERE issue_id = ?")->execute([$issueId]);
+                    } else {
+                        header('Content-Type: application/json');
+                        echo json_encode([
+                            'error' => 'incomplete_subtasks',
+                            'count' => $incompleteCount
+                        ]);
+                        exit;
+                    }
+                }
+            }
             
             // Auto-assign logic
             $assignedToUpdate = "";
-            $params = [$input['status']];
+            $params = [$status];
             
-            $newAssignee = $this->getAutoAssignUser($input['status']);
+            $newAssignee = $this->getAutoAssignUser($status);
             if ($newAssignee) {
                 $assignedToUpdate = ", assigned_to_id = ?";
                 $params[] = $newAssignee;
             }
             
-            $params[] = $input['issue_id'];
+            $params[] = $issueId;
 
             $stmt = $db->prepare("UPDATE issues SET status = ?, updated_at = CURRENT_TIMESTAMP $assignedToUpdate WHERE id = ?");
             $stmt->execute($params);
 
             if ($newAssignee) {
                 try {
-                    (new NotificationService())->sendAssignmentNotification($input['issue_id'], $newAssignee, Auth::user()['id']);
+                    (new NotificationService())->sendAssignmentNotification($issueId, $newAssignee, Auth::user()['id']);
                 } catch (Exception $e) {
                     Logger::log('Notification Error', $e->getMessage());
                 }
@@ -364,5 +402,116 @@ class IssueController {
             return Settings::get($settingKey);
         }
         return null;
+    }
+
+    public function getSubTasks() {
+        Auth::requireLogin();
+        $issueId = $_GET['issue_id'] ?? null;
+        if (!$issueId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing issue_id']);
+            exit;
+        }
+
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT * FROM issue_sub_tasks WHERE issue_id = ? ORDER BY created_at ASC");
+        $stmt->execute([$issueId]);
+        $subTasks = $stmt->fetchAll();
+
+        header('Content-Type: application/json');
+        echo json_encode($subTasks);
+        exit;
+    }
+
+    public function createSubTask() {
+        Auth::requireLogin();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $issueId = $data['issue_id'] ?? null;
+        $description = trim($data['description'] ?? '');
+
+        if (!$issueId || !$description) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields']);
+            exit;
+        }
+
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT id FROM issues WHERE id = ?");
+        $stmt->execute([$issueId]);
+        if (!$stmt->fetch()) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Issue not found']);
+            exit;
+        }
+
+        $insertStmt = $db->prepare("INSERT INTO issue_sub_tasks (issue_id, description, is_completed) VALUES (?, ?, 0)");
+        $insertStmt->execute([$issueId, $description]);
+        $newId = $db->lastInsertId();
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'id' => $newId,
+            'issue_id' => $issueId,
+            'description' => $description,
+            'is_completed' => 0
+        ]);
+        exit;
+    }
+
+    public function toggleSubTask() {
+        Auth::requireLogin();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $id = $data['id'] ?? null;
+        $isCompleted = isset($data['is_completed']) ? (int)$data['is_completed'] : null;
+
+        if (!$id || $isCompleted === null) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields']);
+            exit;
+        }
+
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT id FROM issue_sub_tasks WHERE id = ?");
+        $stmt->execute([$id]);
+        if (!$stmt->fetch()) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Sub-task not found']);
+            exit;
+        }
+
+        $updateStmt = $db->prepare("UPDATE issue_sub_tasks SET is_completed = ? WHERE id = ?");
+        $updateStmt->execute([$isCompleted, $id]);
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    public function deleteSubTask() {
+        Auth::requireLogin();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $id = $data['id'] ?? null;
+
+        if (!$id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields']);
+            exit;
+        }
+
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT id FROM issue_sub_tasks WHERE id = ?");
+        $stmt->execute([$id]);
+        if (!$stmt->fetch()) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Sub-task not found']);
+            exit;
+        }
+
+        $deleteStmt = $db->prepare("DELETE FROM issue_sub_tasks WHERE id = ?");
+        $deleteStmt->execute([$id]);
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
     }
 }
