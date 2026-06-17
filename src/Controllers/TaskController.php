@@ -280,9 +280,11 @@ class TaskController {
             'task' => $task,
             'comments' => $comments,
             'subtasks' => $subtasks,
+            'users' => $this->getAllUsers(),
             'current_user_id' => Auth::user()['id'],
             'is_admin' => Auth::user()['is_admin']
         ]);
+        exit;
         exit;
     }
 

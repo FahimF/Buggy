@@ -17,6 +17,23 @@
         </div>
     </div>
 
+    <!-- Task Edit Modal (Full Width, 16px Padding) -->
+    <div class="modal fade" id="taskEditModal" tabindex="-1" aria-labelledby="taskEditModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-fullscreen-sm-down modal-xl" style="max-width: calc(100% - 32px); margin: 16px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="taskEditModalLabel">Edit Task</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="padding: 16px;">
+                    <div id="taskEditContent">
+                        <!-- Loaded dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Image Preview Modal -->
     <div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -39,9 +56,255 @@
     <script>
         // Global helper to show task details in a dialog
         var globalTaskDetailsModal = null;
+        var globalTaskEditModal = null;
         var globalCommentQuill = null;
+        var globalTaskEditQuill = null;
+        
+        function showTaskEdit(taskId) {
+            // If details modal is open, hide it
+            if (globalTaskDetailsModal) {
+                globalTaskDetailsModal.hide();
+            }
+            
+            var modalEl = document.getElementById('taskEditModal');
+            if (!globalTaskEditModal) {
+                globalTaskEditModal = new bootstrap.Modal(modalEl);
+            }
+            
+            var contentDiv = document.getElementById('taskEditContent');
+            contentDiv.innerHTML = '<div class="text-center my-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Loading task editor...</p></div>';
+            globalTaskEditModal.show();
+            
+            fetch('/tasks/details?id=' + taskId)
+                .then(res => res.json())
+                .then(data => {
+                    var task = data.task;
+                    var users = data.users;
+                    var subtasks = data.subtasks;
+                    
+                    var usersOptions = '<option value="">-- Unassigned --</option>';
+                    users.forEach(function(u) {
+                        var selected = task.assigned_to_id == u.id ? 'selected' : '';
+                        usersOptions += `<option value="${u.id}" ${selected}>${escapeHtml(u.username)}</option>`;
+                    });
+                    
+                    var subtasksHtml = '';
+                    var incompleteCount = 0;
+                    subtasks.forEach(function(st) {
+                        var isComp = parseInt(st.is_completed) === 1;
+                        if (!isComp) incompleteCount++;
+                        var checked = isComp ? 'checked' : '';
+                        var labelContent = isComp ? `<s>${escapeHtml(st.description)}</s>` : escapeHtml(st.description);
+                        subtasksHtml += `
+                            <div class="d-flex align-items-center justify-content-between border-bottom py-1">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input modal-subtask-chk" ${checked} data-id="${st.id}">
+                                    <label class="form-check-label ms-2">${labelContent}</label>
+                                </div>
+                                <button type="button" class="btn btn-sm text-danger py-0 modal-subtask-del-btn" data-id="${st.id}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                    });
+                    
+                    var html = `
+                        <form action="/tasks/${task.id}/update" method="post" id="modalEditTaskForm">
+                            <input type="hidden" name="referrer" value="${window.location.href}">
+                            <div class="mb-3">
+                                <label class="form-label">Title</label>
+                                <input type="text" name="title" class="form-control" value="${escapeHtml(task.title)}" required>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Type</label>
+                                    <select name="type" class="form-select">
+                                        <option value="Bug" ${task.type === 'Bug' ? 'selected' : ''}>Bug</option>
+                                        <option value="Feature" ${task.type === 'Feature' ? 'selected' : ''}>Feature</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Priority</label>
+                                    <select name="priority" class="form-select">
+                                        <option value="High" ${task.priority === 'High' ? 'selected' : ''}>High</option>
+                                        <option value="Medium" ${task.priority === 'Medium' ? 'selected' : ''}>Medium</option>
+                                        <option value="Low" ${task.priority === 'Low' ? 'selected' : ''}>Low</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Status</label>
+                                    <select name="status" class="form-select">
+                                        <option value="Unassigned" ${task.status === 'Unassigned' ? 'selected' : ''}>Unassigned</option>
+                                        <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                        <option value="Ready for QA" ${task.status === 'Ready for QA' ? 'selected' : ''}>Ready for QA</option>
+                                        <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                                        <option value="WND" ${task.status === 'WND' ? 'selected' : ''}>WND</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">Assign To</label>
+                                    <select name="assigned_to" class="form-select">
+                                        ${usersOptions}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Description</label>
+                                <div id="modal-editor-container" style="height: 250px;">${task.description || ''}</div>
+                                <input type="hidden" name="description" id="modalDescriptionInput">
+                            </div>
+                            
+                            <hr>
+                            <div class="mb-4">
+                                <h5>Sub-tasks</h5>
+                                <div id="modalEditSubtasksContainer" class="mb-3">
+                                    ${subtasksHtml}
+                                </div>
+                                <div class="input-group">
+                                    <input type="text" id="modalNewSubtaskDesc" class="form-control" placeholder="Add a sub-task...">
+                                    <button type="button" class="btn btn-outline-secondary" id="modalBtnAddSubtask">Add Sub-task</button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary">Update Task</button>
+                            </div>
+                        </form>
+                    `;
+                    contentDiv.innerHTML = html;
+                    
+                    // Initialize Quill for Edit inside modal
+                    globalTaskEditQuill = new Quill('#modal-editor-container', {
+                        theme: 'snow',
+                        modules: {
+                            toolbar: [
+                                [{ 'header': [1, 2, 3, false] }],
+                                ['bold', 'italic', 'underline', 'strike'],
+                                [{ 'color': [] }, { 'background': [] }],
+                                [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'list': 'check' }],
+                                ['image', 'code-block']
+                            ]
+                        }
+                    });
+                    
+                    var form = document.getElementById('modalEditTaskForm');
+                    form.onsubmit = function() {
+                        document.getElementById('modalDescriptionInput').value = globalTaskEditQuill.root.innerHTML;
+                        var status = form.querySelector('select[name="status"]').value;
+                        if (status === 'Completed' && incompleteCount > 0) {
+                            if (confirm('This task has ' + incompleteCount + ' incomplete sub-task(s). Would you like to mark all sub-tasks as completed and save changes?')) {
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = 'force_complete_subtasks';
+                                input.value = '1';
+                                form.appendChild(input);
+                            } else {
+                                return false;
+                            }
+                        }
+                    };
+                    
+                    // Subtasks inside modal handlers
+                    function refreshModalSubtasks() {
+                        fetch('/tasks/sub-tasks?issue_id=' + task.id)
+                            .then(res => res.json())
+                            .then(newSubtasks => {
+                                var container = document.getElementById('modalEditSubtasksContainer');
+                                container.innerHTML = '';
+                                incompleteCount = 0;
+                                newSubtasks.forEach(st => {
+                                    var isComp = parseInt(st.is_completed) === 1;
+                                    if (!isComp) incompleteCount++;
+                                    var div = document.createElement('div');
+                                    div.className = 'd-flex align-items-center justify-content-between border-bottom py-1';
+                                    div.innerHTML = `
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input modal-subtask-chk" ${isComp ? 'checked' : ''} data-id="${st.id}">
+                                            <label class="form-check-label ms-2">${isComp ? '<s>' + escapeHtml(st.description) + '</s>' : escapeHtml(st.description)}</label>
+                                        </div>
+                                        <button type="button" class="btn btn-sm text-danger py-0 modal-subtask-del-btn" data-id="${st.id}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    `;
+                                    container.appendChild(div);
+                                    
+                                    // bind toggle
+                                    div.querySelector('.modal-subtask-chk').addEventListener('change', function() {
+                                        fetch('/tasks/sub-tasks/toggle', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ id: st.id, is_completed: this.checked ? 1 : 0 })
+                                        }).then(() => refreshModalSubtasks());
+                                    });
+                                    // bind delete
+                                    div.querySelector('.modal-subtask-del-btn').addEventListener('click', function() {
+                                        if (confirm('Delete this sub-task?')) {
+                                            fetch('/tasks/sub-tasks/delete', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ id: st.id })
+                                            }).then(() => refreshModalSubtasks());
+                                        }
+                                    });
+                                });
+                            });
+                    }
+                    
+                    // Initial binds
+                    document.querySelectorAll('.modal-subtask-chk').forEach(function(chk) {
+                        chk.addEventListener('change', function() {
+                            fetch('/tasks/sub-tasks/toggle', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: this.dataset.id, is_completed: this.checked ? 1 : 0 })
+                            }).then(() => refreshModalSubtasks());
+                        });
+                    });
+                    
+                    document.querySelectorAll('.modal-subtask-del-btn').forEach(function(btn) {
+                        btn.addEventListener('click', function() {
+                            if (confirm('Delete this sub-task?')) {
+                                fetch('/tasks/sub-tasks/delete', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ id: this.dataset.id })
+                                }).then(() => refreshModalSubtasks());
+                            }
+                        });
+                    });
+                    
+                    document.getElementById('modalBtnAddSubtask').addEventListener('click', function() {
+                        var input = document.getElementById('modalNewSubtaskDesc');
+                        var desc = input.value.trim();
+                        if (!desc) return;
+                        fetch('/tasks/sub-tasks/create', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ issue_id: task.id, description: desc })
+                        }).then(() => {
+                            input.value = '';
+                            refreshModalSubtasks();
+                        });
+                    });
+                    
+                    document.getElementById('modalNewSubtaskDesc').addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            document.getElementById('modalBtnAddSubtask').click();
+                        }
+                    });
+                });
+        }
         
         function showTaskDetails(taskId) {
+            // If edit modal is open, hide it
+            if (globalTaskEditModal) {
+                globalTaskEditModal.hide();
+            }
+            
             var modalEl = document.getElementById('taskDetailsModal');
             if (!globalTaskDetailsModal) {
                 globalTaskDetailsModal = new bootstrap.Modal(modalEl);
@@ -112,12 +375,14 @@
                     } else {
                         subtasks.forEach(st => {
                             var isComp = parseInt(st.is_completed) === 1;
-                            var iconClass = isComp ? 'bi bi-check-square-fill text-success' : 'bi bi-square text-muted';
-                            var descSpan = isComp ? `<s>${escapeHtml(st.description)}</s>` : escapeHtml(st.description);
+                            var checked = isComp ? 'checked' : '';
+                            var labelClass = isComp ? 'text-decoration-line-through text-muted' : '';
                             subtasksHtml += `
                                 <div class="d-flex align-items-center border-bottom py-2">
-                                    <i class="${iconClass} me-2"></i>
-                                    <span>${descSpan}</span>
+                                    <div class="form-check m-0">
+                                        <input type="checkbox" class="form-check-input detail-subtask-chk" ${checked} data-id="${st.id}">
+                                        <label class="form-check-label ms-2 ${labelClass}">${escapeHtml(st.description)}</label>
+                                    </div>
                                 </div>
                             `;
                         });
@@ -131,9 +396,9 @@
                                         <div class="d-flex justify-content-between align-items-start">
                                             <h2 class="card-title">${escapeHtml(task.title)}</h2>
                                             <div class="btn-group">
-                                                <a href="/tasks/${task.id}/edit" class="btn btn-outline-primary">
+                                                <button type="button" class="btn btn-outline-primary modal-task-edit-trigger" data-id="${task.id}">
                                                     <i class="bi bi-pencil"></i> Edit
-                                                </a>
+                                                </button>
                                                 <form action="/tasks/${task.id}/delete" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this task?');">
                                                     <button type="submit" class="btn btn-outline-danger">
                                                         <i class="bi bi-trash"></i> Delete
@@ -211,6 +476,11 @@
                     `;
                     contentDiv.innerHTML = html;
                     
+                    // Bind edit trigger in details modal
+                    contentDiv.querySelector('.modal-task-edit-trigger').addEventListener('click', function() {
+                        showTaskEdit(this.dataset.id);
+                    });
+                    
                     // Initialize Quill Editor inside Modal
                     globalCommentQuill = new Quill('#modal-comment-editor', {
                         theme: 'snow',
@@ -256,12 +526,17 @@
                 var taskLink = e.target.closest('a[href^="/tasks/"]');
                 if (taskLink) {
                     var href = taskLink.getAttribute('href');
-                    // Matches /tasks/123, but not /tasks/123/edit, /tasks/create etc.
                     var match = href.match(/^\/tasks\/(\d+)$/);
                     if (match) {
                         e.preventDefault();
                         var taskId = match[1];
                         showTaskDetails(taskId);
+                    }
+                    var matchEdit = href.match(/^\/tasks\/(\d+)\/edit$/);
+                    if (matchEdit) {
+                        e.preventDefault();
+                        var taskId = matchEdit[1];
+                        showTaskEdit(taskId);
                     }
                 }
             });
