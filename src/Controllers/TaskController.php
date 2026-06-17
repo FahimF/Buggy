@@ -542,4 +542,66 @@ class TaskController {
         echo json_encode(['success' => true]);
         exit;
     }
+
+    public function nestTask() {
+        Auth::requireLogin();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $sourceId = $data['source_id'] ?? null;
+        $destId = $data['dest_id'] ?? null;
+
+        if (!$sourceId || !$destId || $sourceId == $destId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Invalid source or destination task']);
+            exit;
+        }
+
+        $db = Database::connect();
+        
+        // Fetch source task
+        $stmt = $db->prepare("SELECT title, description FROM tasks WHERE id = ?");
+        $stmt->execute([$sourceId]);
+        $sourceTask = $stmt->fetch();
+
+        // Fetch destination task
+        $stmt = $db->prepare("SELECT id FROM tasks WHERE id = ?");
+        $stmt->execute([$destId]);
+        $destTask = $stmt->fetch();
+
+        if (!$sourceTask || !$destTask) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Source or destination task not found']);
+            exit;
+        }
+
+        $title = $sourceTask['title'];
+        $desc = strip_tags($sourceTask['description'] ?? '');
+        
+        // Merge title and description for sub-task description
+        $subTaskDescription = $title;
+        if (!empty($desc)) {
+            $subTaskDescription .= ": " . $desc;
+        }
+
+        $db->beginTransaction();
+        try {
+            // Insert sub_task
+            $insertStmt = $db->prepare("INSERT INTO sub_tasks (task_id, description, is_completed) VALUES (?, ?, 0)");
+            $insertStmt->execute([$destId, $subTaskDescription]);
+
+            // Delete source task
+            $deleteStmt = $db->prepare("DELETE FROM tasks WHERE id = ?");
+            $deleteStmt->execute([$sourceId]);
+
+            $db->commit();
+            
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit;
+        } catch (Exception $e) {
+            $db->rollBack();
+            http_response_code(500);
+            echo json_encode(['error' => 'Failed to nest task: ' . $e->getMessage()]);
+            exit;
+        }
+    }
 }

@@ -208,12 +208,87 @@ document.addEventListener('DOMContentLoaded', function() {
     var ipList = document.getElementById('in-progress-list');
     var uaList = document.getElementById('unassigned-list');
 
+    // Track currently hovered status card during drag
+    var hoveredCard = null;
+
+    // We can use standard HTML5 drag and drop events on card elements for nesting,
+    // while SortableJS uses the handle (bi-grip-vertical) for reordering / status moves.
+    document.querySelectorAll('.status-card').forEach(function(card) {
+        // Set card draggable for nesting (independent of Sortable's handle drag)
+        card.setAttribute('draggable', 'true');
+        
+        card.addEventListener('dragstart', function(e) {
+            // Only initiate nesting drag if we are NOT dragging by the handle
+            if (e.target.closest('.bi-grip-vertical')) {
+                // Let SortableJS handle it, cancel standard drag data
+                return;
+            }
+            e.dataTransfer.setData('text/plain', this.getAttribute('data-id'));
+            e.dataTransfer.effectAllowed = 'copyMove';
+            this.classList.add('dragging-for-nest');
+        });
+
+        card.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging-for-nest');
+            document.querySelectorAll('.status-card').forEach(c => c.style.border = '');
+            hoveredCard = null;
+        });
+
+        card.addEventListener('dragover', function(e) {
+            var draggingEl = document.querySelector('.dragging-for-nest');
+            if (draggingEl && draggingEl !== this) {
+                e.preventDefault(); // Allow drop
+                this.style.border = '2px dashed #0d6efd';
+                hoveredCard = this;
+            }
+        });
+
+        card.addEventListener('dragleave', function(e) {
+            this.style.border = '';
+            if (hoveredCard === this) {
+                hoveredCard = null;
+            }
+        });
+
+        card.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.border = '';
+            var sourceId = e.dataTransfer.getData('text/plain');
+            var destId = this.getAttribute('data-id');
+            
+            if (sourceId && destId && sourceId !== destId) {
+                if (confirm('Are you sure you want to make this task a sub-task of "' + this.querySelector('a').textContent.trim() + '"?')) {
+                    fetch('/tasks/nest', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ source_id: sourceId, dest_id: destId })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            alert(data.error || 'Failed to make task a sub-task.');
+                            window.location.reload();
+                        }
+                    })
+                    .catch(() => {
+                        window.location.reload();
+                    });
+                }
+            }
+        });
+    });
+
     [ipList, uaList].forEach(function(listEl) {
         new Sortable(listEl, {
             group: 'status-group',
             animation: 150,
             handle: '.bi-grip-vertical',
             onEnd: function (evt) {
+                // Remove highlight style on end
+                document.querySelectorAll('.status-card').forEach(c => c.style.border = '');
+
                 var itemEl = evt.item;
                 var newStatus = evt.to.getAttribute('data-status');
                 var taskId = itemEl.getAttribute('data-id');
@@ -228,8 +303,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        // Refresh to reflect proper assignee/checkbox adjustments from server logic dynamically if necessary,
-                        // or just reload to ensure correct layout template rendering.
                         window.location.reload();
                     } else {
                         window.location.reload();

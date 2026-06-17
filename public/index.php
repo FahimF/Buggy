@@ -118,6 +118,8 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new TaskController())->toggleSubTask();
 } elseif ($uri === '/tasks/sub-tasks/delete') {
     (new TaskController())->deleteSubTask();
+} elseif ($uri === '/tasks/nest') {
+    (new TaskController())->nestTask();
 } elseif ($uri === '/tasks/reorder') {
     (new TaskController())->reorder();
 } elseif (preg_match('#^/tasks/(\d+)$#', $uri, $matches)) {
