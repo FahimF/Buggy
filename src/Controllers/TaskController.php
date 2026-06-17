@@ -72,8 +72,15 @@ class TaskController {
         // Handle View Mode Persistence
         if (isset($_GET['view']) && $_GET['view'] === 'list') {
             $_SESSION['task_view_mode'] = 'list';
+        } elseif (isset($_GET['view']) && $_GET['view'] === 'status') {
+            $_SESSION['task_view_mode'] = 'status';
+            header("Location: /projects/$projectId/status");
+            exit;
         } elseif (isset($_SESSION['task_view_mode']) && $_SESSION['task_view_mode'] === 'kanban') {
             header("Location: /projects/$projectId/kanban");
+            exit;
+        } elseif (isset($_SESSION['task_view_mode']) && $_SESSION['task_view_mode'] === 'status') {
+            header("Location: /projects/$projectId/status");
             exit;
         } else {
             $_SESSION['task_view_mode'] = 'list';
@@ -132,6 +139,34 @@ class TaskController {
         $users = $this->getAllUsers();
         
         require __DIR__ . '/../Views/tasks/kanban.php';
+    }
+
+    public function status($projectId) {
+        Auth::requireLogin();
+        
+        $_SESSION['task_view_mode'] = 'status';
+
+        $project = $this->getProject($projectId);
+        if (!$project) die("Project not found");
+
+        $tasks = $this->getIssues($projectId, 'sort_order ASC', false, false);
+        
+        // Group into In Progress and Unassigned
+        $statusData = [
+            'In Progress' => [],
+            'Unassigned' => []
+        ];
+        foreach ($tasks as $task) {
+            if ($task['status'] === 'In Progress') {
+                $statusData['In Progress'][] = $task;
+            } elseif ($task['status'] === 'Unassigned') {
+                $statusData['Unassigned'][] = $task;
+            }
+        }
+
+        $users = $this->getAllUsers();
+        
+        require __DIR__ . '/../Views/tasks/status.php';
     }
 
     public function create() {

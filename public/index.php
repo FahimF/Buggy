@@ -104,6 +104,8 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new TaskController())->index($matches[1]);
 } elseif (preg_match('#^/projects/(\d+)/kanban$#', $uri, $matches)) {
     (new TaskController())->kanban($matches[1]);
+} elseif (preg_match('#^/projects/(\d+)/status$#', $uri, $matches)) {
+    (new TaskController())->status($matches[1]);
 } elseif ($uri === '/tasks/create') {
     (new TaskController())->create();
 } elseif ($uri === '/tasks/update_status') {

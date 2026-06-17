@@ -6,9 +6,16 @@
         <span class="badge bg-secondary ms-2">List View</span>
     </div>
     <div>
-        <a href="/projects/<?= $project['id'] ?>/kanban" class="btn btn-outline-secondary me-2">
-            <i class="bi bi-kanban"></i> Kanban Board
-        </a>
+        <div class="dropdown d-inline-block me-2">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="viewModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-eye"></i> List View
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="viewModeDropdown">
+                <li><a class="dropdown-item active" href="/projects/<?= $project['id'] ?>?view=list">List View</a></li>
+                <li><a class="dropdown-item" href="/projects/<?= $project['id'] ?>/kanban">Kanban View</a></li>
+                <li><a class="dropdown-item" href="/projects/<?= $project['id'] ?>/status">Status View</a></li>
+            </ul>
+        </div>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
             <i class="bi bi-plus-lg"></i> New Task
         </button>
