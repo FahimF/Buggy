@@ -52,67 +52,121 @@
     opacity: 0.4;
     background-color: #e9ecef;
 }
+.collapse-indicator {
+    transition: transform 0.2s;
+    display: inline-block;
+}
+.card-header[aria-expanded="false"] .collapse-indicator {
+    transform: rotate(-90deg);
+}
 </style>
 
 <div class="row">
     <!-- In Progress Section -->
     <div class="col-12 mb-4">
         <div class="card border-primary">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-play-circle-fill me-2"></i>In Progress</h5>
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center" role="button" data-bs-toggle="collapse" data-bs-target="#in-progress-collapse" aria-expanded="true" aria-controls="in-progress-collapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="bi bi-play-circle-fill me-2"></i>In Progress
+                    <i class="bi bi-chevron-down ms-2 collapse-indicator"></i>
+                </h5>
                 <span class="badge bg-white text-primary rounded-pill" id="in-progress-count"><?= count($statusData['In Progress']) ?></span>
             </div>
-            <div class="card-body">
-                <div class="status-list d-flex flex-column gap-2" id="in-progress-list" data-status="In Progress">
-                    <?php foreach ($statusData['In Progress'] as $task): ?>
-                        <div class="card status-card shadow-sm" data-id="<?= $task['id'] ?>">
-                            <div class="card-body p-3 d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-3 flex-grow-1">
-                                    <div class="form-check m-0">
-                                        <input class="form-check-input task-complete-checkbox" type="checkbox" style="transform: scale(1.2);" data-id="<?= $task['id'] ?>">
+            <div class="collapse show" id="in-progress-collapse">
+                <div class="card-body">
+                    <div class="status-list d-flex flex-column gap-2" id="in-progress-list" data-status="In Progress">
+                        <?php foreach ($statusData['In Progress'] as $task): ?>
+                            <div class="card status-card shadow-sm" data-id="<?= $task['id'] ?>">
+                                <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3 flex-grow-1">
+                                        <div class="form-check m-0">
+                                            <input class="form-check-input task-complete-checkbox" type="checkbox" style="transform: scale(1.2);" data-id="<?= $task['id'] ?>">
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <h6 class="m-0 task-title-container">
+                                                <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none text-dark fw-bold task-title-link"><?= htmlspecialchars($task['title']) ?></a>
+                                            </h6>
+                                        </div>
                                     </div>
-                                    <div class="flex-grow-1">
-                                        <h6 class="m-0 task-title-container">
-                                            <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none text-dark fw-bold task-title-link"><?= htmlspecialchars($task['title']) ?></a>
-                                        </h6>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-grip-vertical text-muted fs-4"></i>
                                     </div>
-                                </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-grip-vertical text-muted fs-4"></i>
                                 </div>
                             </div>
-                        </div>
-                    <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Ready for QA Section -->
+    <?php if (!empty($statusData['Ready for QA'])): ?>
+    <div class="col-12 mb-4">
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center" role="button" data-bs-toggle="collapse" data-bs-target="#ready-for-qa-collapse" aria-expanded="true" aria-controls="ready-for-qa-collapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="bi bi-check2-circle-fill me-2"></i>Ready for QA
+                    <i class="bi bi-chevron-down ms-2 collapse-indicator"></i>
+                </h5>
+                <span class="badge bg-dark text-white rounded-pill" id="ready-for-qa-count"><?= count($statusData['Ready for QA']) ?></span>
+            </div>
+            <div class="collapse show" id="ready-for-qa-collapse">
+                <div class="card-body">
+                    <div class="status-list d-flex flex-column gap-2" id="ready-for-qa-list" data-status="Ready for QA">
+                        <?php foreach ($statusData['Ready for QA'] as $task): ?>
+                            <div class="card status-card shadow-sm" data-id="<?= $task['id'] ?>">
+                                <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3 flex-grow-1">
+                                        <div class="flex-grow-1">
+                                            <h6 class="m-0">
+                                                <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none text-dark fw-bold"><?= htmlspecialchars($task['title']) ?></a>
+                                            </h6>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-grip-vertical text-muted fs-4"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Unassigned Section -->
     <div class="col-12 mb-4">
         <div class="card border-secondary">
-            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-question-circle-fill me-2"></i>Unassigned</h5>
+            <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center" role="button" data-bs-toggle="collapse" data-bs-target="#unassigned-collapse" aria-expanded="true" aria-controls="unassigned-collapse" style="cursor: pointer;">
+                <h5 class="mb-0">
+                    <i class="bi bi-question-circle-fill me-2"></i>Unassigned
+                    <i class="bi bi-chevron-down ms-2 collapse-indicator"></i>
+                </h5>
                 <span class="badge bg-light text-dark rounded-pill" id="unassigned-count"><?= count($statusData['Unassigned']) ?></span>
             </div>
-            <div class="card-body">
-                <div class="status-list d-flex flex-column gap-2" id="unassigned-list" data-status="Unassigned">
-                    <?php foreach ($statusData['Unassigned'] as $task): ?>
-                        <div class="card status-card shadow-sm" data-id="<?= $task['id'] ?>">
-                            <div class="card-body p-3 d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-3 flex-grow-1">
-                                    <div class="flex-grow-1">
-                                        <h6 class="m-0">
-                                            <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none text-dark fw-bold"><?= htmlspecialchars($task['title']) ?></a>
-                                        </h6>
+            <div class="collapse show" id="unassigned-collapse">
+                <div class="card-body">
+                    <div class="status-list d-flex flex-column gap-2" id="unassigned-list" data-status="Unassigned">
+                        <?php foreach ($statusData['Unassigned'] as $task): ?>
+                            <div class="card status-card shadow-sm" data-id="<?= $task['id'] ?>">
+                                <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-3 flex-grow-1">
+                                        <div class="flex-grow-1">
+                                            <h6 class="m-0">
+                                                <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none text-dark fw-bold"><?= htmlspecialchars($task['title']) ?></a>
+                                            </h6>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="bi bi-grip-vertical text-muted fs-4"></i>
                                     </div>
                                 </div>
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="bi bi-grip-vertical text-muted fs-4"></i>
-                                </div>
                             </div>
-                        </div>
-                    <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -208,11 +262,17 @@ document.addEventListener('DOMContentLoaded', function() {
         var completedOnScreen = document.querySelectorAll('#in-progress-list .completed-task').length;
         document.getElementById('in-progress-count').textContent = document.querySelectorAll('#in-progress-list .status-card').length - completedOnScreen;
         document.getElementById('unassigned-count').textContent = document.querySelectorAll('#unassigned-list .status-card').length;
+        
+        var qaCountEl = document.getElementById('ready-for-qa-count');
+        if (qaCountEl) {
+            qaCountEl.textContent = document.querySelectorAll('#ready-for-qa-list .status-card').length;
+        }
     }
 
-    // Drag and drop sorting between In Progress and Unassigned lists
+    // Drag and drop sorting between lists
     var ipList = document.getElementById('in-progress-list');
     var uaList = document.getElementById('unassigned-list');
+    var qaList = document.getElementById('ready-for-qa-list');
 
     // Track currently hovered status card during drag
     var hoveredCard = null;
@@ -290,7 +350,11 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    [ipList, uaList].forEach(function(listEl) {
+    var sortableLists = [ipList, uaList];
+    if (qaList) {
+        sortableLists.push(qaList);
+    }
+    sortableLists.forEach(function(listEl) {
         new Sortable(listEl, {
             group: 'status-group',
             animation: 150,

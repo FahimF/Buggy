@@ -151,16 +151,19 @@ class TaskController {
 
         $tasks = $this->getIssues($projectId, 'sort_order ASC', false, false);
         
-        // Group into In Progress and Unassigned
+        // Group into In Progress, Unassigned, and Ready for QA
         $statusData = [
             'In Progress' => [],
-            'Unassigned' => []
+            'Unassigned' => [],
+            'Ready for QA' => []
         ];
         foreach ($tasks as $task) {
             if ($task['status'] === 'In Progress') {
                 $statusData['In Progress'][] = $task;
             } elseif ($task['status'] === 'Unassigned') {
                 $statusData['Unassigned'][] = $task;
+            } elseif ($task['status'] === 'Ready for QA') {
+                $statusData['Ready for QA'][] = $task;
             }
         }
 
