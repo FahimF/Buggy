@@ -57,6 +57,7 @@ class Database {
                 name TEXT NOT NULL,
                 color TEXT DEFAULT '#007bff',
                 text_color TEXT DEFAULT '#ffffff',
+                complete_moves_to TEXT DEFAULT 'Completed',
                 owner_id INTEGER NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (owner_id) REFERENCES users(id)
@@ -174,6 +175,12 @@ class Database {
         }
 
         // Migration for existing tables
+        try {
+            self::$pdo->exec("ALTER TABLE projects ADD COLUMN complete_moves_to TEXT DEFAULT 'Completed'");
+        } catch (PDOException $e) {
+            // Column likely already exists
+        }
+
         try {
             self::$pdo->exec("ALTER TABLE tasks ADD COLUMN type TEXT DEFAULT 'Bug'");
         } catch (PDOException $e) {

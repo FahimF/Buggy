@@ -236,11 +236,12 @@ class ProjectController {
             $name = $_POST['name'];
             $color = $_POST['color'];
             $textColor = $_POST['text_color'] ?? '#ffffff';
+            $completeMovesTo = $_POST['complete_moves_to'] ?? 'Completed';
             $ownerId = Auth::user()['id'];
             
             $db = Database::connect();
-            $stmt = $db->prepare("INSERT INTO projects (name, color, text_color, owner_id) VALUES (?, ?, ?, ?)");
-            $stmt->execute([$name, $color, $textColor, $ownerId]);
+            $stmt = $db->prepare("INSERT INTO projects (name, color, text_color, complete_moves_to, owner_id) VALUES (?, ?, ?, ?, ?)");
+            $stmt->execute([$name, $color, $textColor, $completeMovesTo, $ownerId]);
             
             Logger::log('Project Created', "Project: $name");
             header('Location: /projects');
@@ -254,10 +255,11 @@ class ProjectController {
             $name = $_POST['name'];
             $color = $_POST['color'];
             $textColor = $_POST['text_color'] ?? '#ffffff';
+            $completeMovesTo = $_POST['complete_moves_to'] ?? 'Completed';
             
             $db = Database::connect();
-            $stmt = $db->prepare("UPDATE projects SET name = ?, color = ?, text_color = ? WHERE id = ?");
-            $stmt->execute([$name, $color, $textColor, $id]);
+            $stmt = $db->prepare("UPDATE projects SET name = ?, color = ?, text_color = ?, complete_moves_to = ? WHERE id = ?");
+            $stmt->execute([$name, $color, $textColor, $completeMovesTo, $id]);
             
             Logger::log('Project Updated', "Project ID: $id");
             header('Location: /projects');

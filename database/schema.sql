@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS projects (
     name TEXT NOT NULL,
     color TEXT DEFAULT '#007bff',
     text_color TEXT DEFAULT '#ffffff',
+    complete_moves_to TEXT DEFAULT 'Completed',
     owner_id INTEGER NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (owner_id) REFERENCES users(id)

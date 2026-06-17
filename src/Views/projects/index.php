@@ -86,7 +86,8 @@
                                 data-id="<?= $project['id'] ?>"
                                 data-name="<?= htmlspecialchars($project['name']) ?>"
                                 data-color="<?= htmlspecialchars($project['color']) ?>"
-                                data-text-color="<?= htmlspecialchars($project['text_color'] ?? '#ffffff') ?>">
+                                data-text-color="<?= htmlspecialchars($project['text_color'] ?? '#ffffff') ?>"
+                                data-complete-moves-to="<?= htmlspecialchars($project['complete_moves_to'] ?? 'Completed') ?>">
                                 Edit
                             </button>
                         </li>
@@ -160,6 +161,13 @@
                         <label>Text Color</label>
                         <input type="color" name="text_color" class="form-control form-control-color" value="#ffffff">
                     </div>
+                    <div class="mb-3">
+                        <label>Completing Moves To</label>
+                        <select name="complete_moves_to" class="form-select">
+                            <option value="Completed">Completed</option>
+                            <option value="Ready for QA">Ready for QA</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -192,6 +200,13 @@
                     <div class="mb-3">
                         <label>Text Color</label>
                         <input type="color" name="text_color" id="editProjectTextColor" class="form-control form-control-color">
+                    </div>
+                    <div class="mb-3">
+                        <label>Completing Moves To</label>
+                        <select name="complete_moves_to" id="editProjectCompleteMovesTo" class="form-select">
+                            <option value="Completed">Completed</option>
+                            <option value="Ready for QA">Ready for QA</option>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -243,11 +258,13 @@ document.addEventListener('DOMContentLoaded', function() {
             var name = this.getAttribute('data-name');
             var color = this.getAttribute('data-color');
             var textColor = this.getAttribute('data-text-color');
+            var completeMovesTo = this.getAttribute('data-complete-moves-to') || 'Completed';
             
             document.getElementById('editProjectId').value = id;
             document.getElementById('editProjectName').value = name;
             document.getElementById('editProjectColor').value = color;
             document.getElementById('editProjectTextColor').value = textColor;
+            document.getElementById('editProjectCompleteMovesTo').value = completeMovesTo;
             
             editModal.show();
         });

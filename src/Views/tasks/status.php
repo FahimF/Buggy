@@ -160,11 +160,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     chkEl.checked = false;
                 }
 
+                var targetStatus = '<?= htmlspecialchars($project['complete_moves_to'] ?? 'Completed') ?>';
+
                 // Update status via AJAX
                 fetch('/tasks/update_status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ issue_id: taskId, status: 'Completed' })
+                    body: JSON.stringify({ issue_id: taskId, status: targetStatus })
                 })
                 .then(res => res.json())
                 .then(data => {
@@ -173,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             fetch('/tasks/update_status', {
                                  method: 'POST',
                                  headers: { 'Content-Type': 'application/json' },
-                                 body: JSON.stringify({ issue_id: taskId, status: 'Completed', force_complete_subtasks: true })
+                                 body: JSON.stringify({ issue_id: taskId, status: targetStatus, force_complete_subtasks: true })
                             })
                             .then(res => res.json())
                             .then(retryData => {
