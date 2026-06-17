@@ -259,7 +259,11 @@ document.addEventListener('DOMContentLoaded', function() {
         card.addEventListener('drop', function(e) {
             e.preventDefault();
             this.style.border = '';
-            var sourceId = e.dataTransfer.getData('text/plain');
+            var draggingEl = document.querySelector('.dragging-for-nest');
+            if (!draggingEl) {
+                return; // Not a nesting drag
+            }
+            var sourceId = draggingEl.getAttribute('data-id');
             var destId = this.getAttribute('data-id');
             
             if (sourceId && destId && sourceId !== destId) {
@@ -297,9 +301,30 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 var itemEl = evt.item;
                 var newStatus = evt.to.getAttribute('data-status');
+                var oldStatus = evt.from.getAttribute('data-status');
                 var taskId = itemEl.getAttribute('data-id');
                 
-                // If dragged, status changes.
+                // If dragged within the same section (reordered position)
+                if (newStatus === oldStatus) {
+                    // Collect new order of IDs in the list
+                    var order = Array.from(evt.to.children).map(card => card.getAttribute('data-id'));
+                    fetch('/tasks/reorder', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ order: order })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Order persisted successfully, no full reload needed for visual list update
+                        } else {
+                            window.location.reload();
+                        }
+                    });
+                    return;
+                }
+                
+                // If dragged between different sections, status changes.
                 // Call status update API
                 fetch('/tasks/update_status', {
                     method: 'POST',
