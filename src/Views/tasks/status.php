@@ -68,16 +68,9 @@
                                         <input class="form-check-input task-complete-checkbox" type="checkbox" style="transform: scale(1.2);" data-id="<?= $task['id'] ?>">
                                     </div>
                                     <div class="flex-grow-1">
-                                        <h6 class="mb-1 task-title-container">
+                                        <h6 class="m-0 task-title-container">
                                             <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none text-dark fw-bold task-title-link"><?= htmlspecialchars($task['title']) ?></a>
                                         </h6>
-                                        <div class="text-muted small">
-                                            <span class="badge <?= getPriorityBadgeClass($task['priority'] ?? 'Medium') ?>"><?= htmlspecialchars($task['priority'] ?? 'Medium') ?></span>
-                                            <span class="badge bg-secondary"><?= htmlspecialchars($task['type'] ?? 'Bug') ?></span>
-                                            <?php if ($task['assigned_to_name']): ?>
-                                                <span class="ms-2"><i class="bi bi-person"></i> <?= htmlspecialchars($task['assigned_to_name']) ?></span>
-                                            <?php endif; ?>
-                                        </div>
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
@@ -105,13 +98,9 @@
                             <div class="card-body p-3 d-flex align-items-center justify-content-between">
                                 <div class="d-flex align-items-center gap-3 flex-grow-1">
                                     <div class="flex-grow-1">
-                                        <h6 class="mb-1">
+                                        <h6 class="m-0">
                                             <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none text-dark fw-bold"><?= htmlspecialchars($task['title']) ?></a>
                                         </h6>
-                                        <div class="text-muted small">
-                                            <span class="badge <?= getPriorityBadgeClass($task['priority'] ?? 'Medium') ?>"><?= htmlspecialchars($task['priority'] ?? 'Medium') ?></span>
-                                            <span class="badge bg-secondary"><?= htmlspecialchars($task['type'] ?? 'Bug') ?></span>
-                                        </div>
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">

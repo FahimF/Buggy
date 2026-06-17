@@ -15,7 +15,7 @@
             <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="viewModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-eye"></i> Kanban View
             </button>
-            <ul class="dropdown-menu" aria-labelledby="viewModeDropdown">
+            <ul class="dropdown-menu" aria-labelledby="viewModeDropdown" style="z-index: 1060;">
                 <li><a class="dropdown-item" href="/projects/<?= $project['id'] ?>?view=list">List View</a></li>
                 <li><a class="dropdown-item active" href="/projects/<?= $project['id'] ?>/kanban">Kanban View</a></li>
                 <li><a class="dropdown-item" href="/projects/<?= $project['id'] ?>/status">Status View</a></li>

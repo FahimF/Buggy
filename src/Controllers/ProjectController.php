@@ -351,7 +351,7 @@ class ProjectController {
             $filePath = $_FILES['csv_file']['tmp_name'];
             if (($handle = fopen($filePath, "r")) !== FALSE) {
                 // Read header row
-                $headers = fgetcsv($handle, 0, ",");
+                $headers = fgetcsv($handle, 0, ",", "\"", "");
                 if ($headers !== FALSE) {
                     // Normalize headers
                     $headers = array_map(function($h) {
@@ -370,7 +370,7 @@ class ProjectController {
                             VALUES (?, ?, ?, 'Feature', ?, ?, ?, ?)
                         ");
 
-                        while (($row = fgetcsv($handle, 0, ",")) !== FALSE) {
+                        while (($row = fgetcsv($handle, 0, ",", "\"", "")) !== FALSE) {
                             $title = $row[$titleIndex] ?? '';
                             if (empty(trim($title))) {
                                 continue;
