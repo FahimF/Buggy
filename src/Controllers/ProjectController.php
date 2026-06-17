@@ -4,10 +4,8 @@ class ProjectController {
     public function dashboard() {
         Auth::requireLogin();
 
-        // Run the recurring/inbox task processor
-        // Using require_once to ensure it runs but functions aren't redefined if included elsewhere
-        // Note: The script executes processRecurringTasks() at the end of the file
-        require_once __DIR__ . '/../../process_recurring_tasks.php';
+        // Run the recurring/inbox job processor
+        require_once __DIR__ . '/../../process_recurring_jobs.php';
 
         $db = Database::connect();
         $currentUserId = (int)Auth::user()['id'];
@@ -15,11 +13,11 @@ class ProjectController {
         // Get the group_by parameter from the request
         $groupBy = $_GET['group_by'] ?? 'project';
 
-        // Fetch issues assigned to the current user with project name and comment count
+        // Fetch tasks assigned to the current user with project name and comment count
         $sql = "
             SELECT i.*, p.name as project_name, u.username as assigned_to_name, c.username as creator_name,
-                (SELECT COUNT(*) FROM comments WHERE issue_id = i.id) as comment_count
-            FROM issues i
+                (SELECT COUNT(*) FROM comments WHERE task_id = i.id) as comment_count
+            FROM tasks i
             JOIN projects p ON i.project_id = p.id
             LEFT JOIN users u ON i.assigned_to_id = u.id
             JOIN users c ON i.creator_id = c.id
@@ -29,74 +27,68 @@ class ProjectController {
 
         $stmt = $db->prepare($sql);
         $stmt->execute([$currentUserId]);
-        $allIssues = $stmt->fetchAll();
+        $allTasks = $stmt->fetchAll();
 
-        // Fetch tasks assigned to the current user
-        $taskSql = "
+        // Fetch jobs assigned to the current user (from user_inbox)
+        $jobSql = "
             SELECT t.*, tl.title as list_title, u.username as assigned_by_name, ui.due_at, ui.id as inbox_id
-            FROM tasks t
-            JOIN user_inbox ui ON t.id = ui.task_id
-            JOIN task_lists tl ON t.list_id = tl.id
+            FROM jobs t
+            JOIN user_inbox ui ON t.id = ui.job_id
+            JOIN job_lists tl ON t.list_id = tl.id
             LEFT JOIN users u ON tl.owner_id = u.id
             WHERE ui.user_id = ? AND ui.status = 'incomplete'
             ORDER BY ui.due_at ASC, t.created_at DESC
         ";
 
-        $taskStmt = $db->prepare($taskSql);
-        $taskStmt->execute([$currentUserId]);
-        $allTasks = $taskStmt->fetchAll();
+        $jobStmt = $db->prepare($jobSql);
+        $jobStmt->execute([$currentUserId]);
+        $allJobs = $jobStmt->fetchAll();
 
         // Fetch users for the modal
         $users = $db->query("SELECT id, username FROM users ORDER BY username")->fetchAll();
 
-        // Fetch projects for the modal (required if project_id is not set)
+        // Fetch projects for the modal
         $projects = $db->query("SELECT id, name FROM projects ORDER BY name")->fetchAll();
 
-        // Group the issues based on the selected option
-        $groupedIssues = $this->groupIssues($allIssues, $groupBy);
+        // Group the tasks based on the selected option
+        $groupedTasks = $this->groupTasks($allTasks, $groupBy);
 
         require __DIR__ . '/../Views/projects/dashboard.php';
     }
 
-    private function groupIssues($issues, $groupBy) {
+    private function groupTasks($tasks, $groupBy) {
         $grouped = [];
 
         switch ($groupBy) {
             case 'project':
-                // Group by project and count occurrences
-                foreach ($issues as $issue) {
-                    $projectName = $issue['project_name'];
+                foreach ($tasks as $task) {
+                    $projectName = $task['project_name'];
                     if (!isset($grouped[$projectName])) {
                         $grouped[$projectName] = [];
                     }
-                    $grouped[$projectName][] = $issue;
+                    $grouped[$projectName][] = $task;
                 }
 
-                // Sort by count (highest first)
                 uasort($grouped, function($a, $b) {
                     return count($b) - count($a);
                 });
                 break;
 
             case 'priority':
-                // Group by priority and count occurrences
-                foreach ($issues as $issue) {
-                    $priority = $issue['priority'];
+                foreach ($tasks as $task) {
+                    $priority = $task['priority'];
                     if (!isset($grouped[$priority])) {
                         $grouped[$priority] = [];
                     }
-                    $grouped[$priority][] = $issue;
+                    $grouped[$priority][] = $task;
                 }
 
-                // Define priority order for sorting
                 $priorityOrder = ['High' => 3, 'Medium' => 2, 'Low' => 1];
 
-                // Sort by count (highest first)
                 uasort($grouped, function($a, $b) use ($priorityOrder) {
                     $countA = count($a);
                     $countB = count($b);
                     if ($countA === $countB) {
-                        // If counts are equal, sort by priority level
                         $priorityA = $a[0]['priority'];
                         $priorityB = $b[0]['priority'];
                         return ($priorityOrder[$priorityB] ?? 0) - ($priorityOrder[$priorityA] ?? 0);
@@ -106,16 +98,14 @@ class ProjectController {
                 break;
 
             case 'type':
-                // Group by type
-                foreach ($issues as $issue) {
-                    $type = $issue['type'];
+                foreach ($tasks as $task) {
+                    $type = $task['type'];
                     if (!isset($grouped[$type])) {
                         $grouped[$type] = [];
                     }
-                    $grouped[$type][] = $issue;
+                    $grouped[$type][] = $task;
                 }
 
-                // Sort by type: Bugs first, then Features, then others
                 $typeOrder = ['Bug' => 3, 'Feature' => 2, 'Task' => 1, 'Improvement' => 0];
 
                 uasort($grouped, function($a, $b) use ($typeOrder) {
@@ -128,32 +118,28 @@ class ProjectController {
                 break;
 
             case 'status':
-                // Group by status and count occurrences
-                foreach ($issues as $issue) {
-                    $status = $issue['status'];
+                foreach ($tasks as $task) {
+                    $status = $task['status'];
                     if (!isset($grouped[$status])) {
                         $grouped[$status] = [];
                     }
-                    $grouped[$status][] = $issue;
+                    $grouped[$status][] = $task;
                 }
 
-                // Sort by count (highest first)
                 uasort($grouped, function($a, $b) {
                     return count($b) - count($a);
                 });
                 break;
 
             default:
-                // Default to project grouping
-                foreach ($issues as $issue) {
-                    $projectName = $issue['project_name'];
+                foreach ($tasks as $task) {
+                    $projectName = $task['project_name'];
                     if (!isset($grouped[$projectName])) {
                         $grouped[$projectName] = [];
                     }
-                    $grouped[$projectName][] = $issue;
+                    $grouped[$projectName][] = $task;
                 }
 
-                // Sort by count (highest first)
                 uasort($grouped, function($a, $b) {
                     return count($b) - count($a);
                 });
@@ -184,10 +170,10 @@ class ProjectController {
 
         if ($sort === 'updated') {
             $orderBy = 'COALESCE(up.is_pinned, 0) DESC, last_activity DESC';
-        } elseif ($sort === 'active_issues') {
-            $orderBy = 'COALESCE(up.is_pinned, 0) DESC, active_issues DESC';
-        } elseif ($sort === 'my_active_issues') {
-            $orderBy = 'COALESCE(up.is_pinned, 0) DESC, my_active_issues DESC';
+        } elseif ($sort === 'active_tasks') {
+            $orderBy = 'COALESCE(up.is_pinned, 0) DESC, active_tasks DESC';
+        } elseif ($sort === 'my_active_tasks') {
+            $orderBy = 'COALESCE(up.is_pinned, 0) DESC, my_active_tasks DESC';
         } elseif ($sort === 'name') {
             $orderBy = 'COALESCE(up.is_pinned, 0) DESC, p.name ASC';
         }
@@ -200,13 +186,13 @@ class ProjectController {
             $params[] = "%" . $_GET['q'] . "%";
         }
 
-        // Fetch projects with owner name, issue counts, and user-specific pinned status
+        // Fetch projects with owner name, task counts, and user-specific pinned status
         $sql = "
             SELECT p.*, u.username as owner_name,
-                (SELECT COUNT(*) FROM issues WHERE project_id = p.id) as total_issues,
-                (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND status NOT IN ('Completed', 'WND')) as active_issues,
-                (SELECT COUNT(*) FROM issues WHERE project_id = p.id AND assigned_to_id = $currentUserId AND status NOT IN ('Completed', 'WND')) as my_active_issues,
-                COALESCE((SELECT MAX(updated_at) FROM issues WHERE project_id = p.id), p.created_at) as last_activity,
+                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id) as total_tasks,
+                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND status NOT IN ('Completed', 'WND')) as active_tasks,
+                (SELECT COUNT(*) FROM tasks WHERE project_id = p.id AND assigned_to_id = $currentUserId AND status NOT IN ('Completed', 'WND')) as my_active_tasks,
+                COALESCE((SELECT MAX(updated_at) FROM tasks WHERE project_id = p.id), p.created_at) as last_activity,
                 up.is_pinned
             FROM projects p
             JOIN users u ON p.owner_id = u.id
@@ -226,7 +212,7 @@ class ProjectController {
         // Fetch user stats
         $statsQuery = "
             SELECT i.project_id, u.username, COUNT(i.id) as count
-            FROM issues i
+            FROM tasks i
             JOIN users u ON i.assigned_to_id = u.id
             WHERE i.status NOT IN ('Completed', 'WND')
             GROUP BY i.project_id, u.username

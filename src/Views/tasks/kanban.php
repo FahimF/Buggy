@@ -3,59 +3,59 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <?php 
-        $totalIssues = array_reduce($kanbanData, function($carry, $column) {
+        $totalTasks = array_reduce($kanbanData, function($carry, $column) {
             return $carry + count($column);
         }, 0);
         ?>
-        <h1 class="d-inline"><?= htmlspecialchars($project['name']) ?> (<?= $totalIssues ?>)</h1>
+        <h1 class="d-inline"><?= htmlspecialchars($project['name']) ?> (<?= $totalTasks ?>)</h1>
         <span class="badge bg-secondary ms-2">Kanban Board</span>
     </div>
     <div>
         <a href="/projects/<?= $project['id'] ?>?view=list" class="btn btn-outline-secondary me-2">
             <i class="bi bi-list-ul"></i> List View
         </a>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createIssueModal">
-            <i class="bi bi-plus-lg"></i> New Issue
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+            <i class="bi bi-plus-lg"></i> New Task
         </button>
     </div>
 </div>
 
 <div class="row flex-nowrap overflow-auto pb-4" style="min-height: 80vh;">
-    <?php foreach ($kanbanData as $columnName => $columnIssues): ?>
+    <?php foreach ($kanbanData as $columnName => $columnTasks): ?>
     <div class="col-md-3" style="min-width: 300px;">
         <div class="card bg-light h-100 border-0">
             <div class="card-header bg-white border-bottom-0 fw-bold sticky-top">
                 <?= htmlspecialchars($columnName) ?>
-                <span class="badge <?= getStatusBadgeClass($columnName) ?> rounded-pill float-end"><?= count($columnIssues) ?></span>
+                <span class="badge <?= getStatusBadgeClass($columnName) ?> rounded-pill float-end"><?= count($columnTasks) ?></span>
             </div>
             <div class="card-body p-2 kanban-column" data-status="<?= htmlspecialchars($columnName) ?>" id="col-<?= md5($columnName) ?>">
-                <?php foreach ($columnIssues as $issue): ?>
-                <div class="card mb-2 shadow-sm kanban-card" data-id="<?= $issue['id'] ?>">
+                <?php foreach ($columnTasks as $task): ?>
+                <div class="card mb-2 shadow-sm kanban-card" data-id="<?= $task['id'] ?>">
                     <div class="card-body p-3">
                         <div class="mb-2">
-                            <?php if (($issue['type'] ?? 'Bug') === 'Bug'): ?>
+                            <?php if (($task['type'] ?? 'Bug') === 'Bug'): ?>
                                 <span class="badge bg-danger rounded-pill" style="font-size: 0.7em;">Bug</span>
                             <?php else: ?>
                                 <span class="badge bg-info text-dark rounded-pill" style="font-size: 0.7em;">Feature</span>
                             <?php endif; ?>
-                            <span class="badge <?= getPriorityBadgeClass($issue['priority'] ?? 'Medium') ?> rounded-pill" style="font-size: 0.7em;">
-                                <?= htmlspecialchars($issue['priority'] ?? 'Medium') ?>
+                            <span class="badge <?= getPriorityBadgeClass($task['priority'] ?? 'Medium') ?> rounded-pill" style="font-size: 0.7em;">
+                                <?= htmlspecialchars($task['priority'] ?? 'Medium') ?>
                             </span>
                         </div>
                         <h6 class="card-title">
-                            <a href="/issues/<?= $issue['id'] ?>" class="text-decoration-none text-dark"><?= htmlspecialchars($issue['title']) ?></a>
+                            <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none text-dark"><?= htmlspecialchars($task['title']) ?></a>
                         </h6>
                         <div class="description-preview">
-                            <?= strip_tags($issue['description']) ?>
+                            <?= strip_tags($task['description']) ?>
                         </div>
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <div>
-                                <small class="text-muted me-2">#<?= $issue['id'] ?></small>
-                                <small class="text-muted"><i class="bi bi-calendar3"></i> <?= date('M j', strtotime($issue['created_at'])) ?></small>
+                                <small class="text-muted me-2">#<?= $task['id'] ?></small>
+                                <small class="text-muted"><i class="bi bi-calendar3"></i> <?= date('M j', strtotime($task['created_at'])) ?></small>
                             </div>
-                            <?php if ($issue['assigned_to_name']): ?>
-                                <span class="badge rounded-pill bg-white text-dark border" title="Assigned to <?= htmlspecialchars($issue['assigned_to_name']) ?>">
-                                    <?= substr(htmlspecialchars($issue['assigned_to_name']), 0, 1) ?>
+                            <?php if ($task['assigned_to_name']): ?>
+                                <span class="badge rounded-pill bg-white text-dark border" title="Assigned to <?= htmlspecialchars($task['assigned_to_name']) ?>">
+                                    <?= substr(htmlspecialchars($task['assigned_to_name']), 0, 1) ?>
                                 </span>
                             <?php endif; ?>
                         </div>
@@ -68,7 +68,7 @@
     <?php endforeach; ?>
 </div>
 
-<!-- Create Issue Modal -->
+<!-- Create Task Modal -->
 <?php require 'create_modal.php'; ?>
 
 <script>
@@ -82,22 +82,22 @@ document.addEventListener('DOMContentLoaded', function() {
             onEnd: function (evt) {
                 var itemEl = evt.item;
                 var newStatus = evt.to.getAttribute('data-status');
-                var issueId = itemEl.getAttribute('data-id');
+                var taskId = itemEl.getAttribute('data-id');
                 
                 // Update status via AJAX
-                fetch('/issues/update_status', {
+                fetch('/tasks/update_status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ issue_id: issueId, status: newStatus })
+                    body: JSON.stringify({ issue_id: taskId, status: newStatus })
                 })
                 .then(res => res.json())
                 .then(data => {
                     if (data.error === 'incomplete_subtasks') {
-                        if (confirm('This issue has ' + data.count + ' incomplete sub-task(s). Would you like to mark all sub-tasks as completed and complete the issue?')) {
-                            fetch('/issues/update_status', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ issue_id: issueId, status: newStatus, force_complete_subtasks: true })
+                        if (confirm('This task has ' + data.count + ' incomplete sub-task(s). Would you like to mark all sub-tasks as completed and complete the task?')) {
+                            fetch('/tasks/update_status', {
+                                 method: 'POST',
+                                 headers: { 'Content-Type': 'application/json' },
+                                 body: JSON.stringify({ issue_id: taskId, status: newStatus, force_complete_subtasks: true })
                             })
                             .then(res => res.json())
                             .then(retryData => {
@@ -109,8 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             window.location.reload();
                         }
                     } else if (data.success) {
-                        // Smooth update - optionally reload if assignee changed
-                        // To keep it simple, we do not force reload on normal success.
+                        // Smooth update
                     }
                 });
             }

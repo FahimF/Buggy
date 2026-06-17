@@ -1,608 +1,510 @@
 <?php
 
 class TaskController {
-    public function index() {
-        Auth::requireLogin();
+    
+    private function getProject($id) {
         $db = Database::connect();
-        $currentUserId = (int)Auth::user()['id'];
+        $stmt = $db->prepare("SELECT * FROM projects WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch();
+    }
 
-        // Fetch all task lists owned by the current user
-        $sql = "
-            SELECT tl.*, u.username as owner_name,
-                (SELECT COUNT(*) FROM tasks WHERE list_id = tl.id) as total_tasks,
-                (SELECT COUNT(*) FROM tasks WHERE list_id = tl.id AND status = 'incomplete') as incomplete_tasks
-            FROM task_lists tl
-            JOIN users u ON tl.owner_id = u.id
-            WHERE tl.owner_id = ?
-            ORDER BY tl.created_at DESC
-        ";
+    private function getIssues($projectId, $orderBy = 'created_at DESC', $hideCompleted = false, $onlyMyIssues = false) {
+        $db = Database::connect();
+        // Allow safe column names for sorting
+        $allowedSorts = ['created_at', 'updated_at', 'title', 'status', 'type', 'sort_order', 'priority', 'assigned_to_name', 'creator_name'];
+        $orderParts = explode(' ', $orderBy);
+        $col = $orderParts[0];
+        $dir = isset($orderParts[1]) ? $orderParts[1] : 'ASC';
+        
+        if (!in_array($col, $allowedSorts)) $col = 'created_at';
+        if (!in_array(strtoupper($dir), ['ASC', 'DESC'])) $dir = 'DESC';
 
+        $whereClause = "WHERE i.project_id = ?";
+        $params = [$projectId];
+
+        if ($hideCompleted) {
+             $whereClause .= " AND i.status NOT IN ('Completed', 'WND')";
+        }
+
+        if ($onlyMyIssues) {
+            $whereClause .= " AND i.assigned_to_id = ?";
+            $params[] = Auth::user()['id'];
+        }
+
+        $orderClause = "$col $dir";
+        if ($col === 'priority') {
+             $orderClause = "CASE 
+                WHEN priority = 'High' THEN 1 
+                WHEN priority = 'Medium' THEN 2 
+                WHEN priority = 'Low' THEN 3 
+                ELSE 4 END $dir";
+        }
+
+        if ($col === 'status') {
+            $orderClause = "CASE 
+               WHEN status = 'Unassigned' THEN 1 
+               WHEN status = 'In Progress' THEN 2 
+               WHEN status = 'Ready for QA' THEN 3 
+               WHEN status = 'Completed' THEN 4 
+               WHEN status = 'WND' THEN 5
+               ELSE 6 END $dir";
+       }
+
+        $sql = "SELECT i.*, u.username as assigned_to_name, c.username as creator_name,
+                (SELECT COUNT(*) FROM comments WHERE task_id = i.id) as comment_count
+                FROM tasks i 
+                LEFT JOIN users u ON i.assigned_to_id = u.id 
+                JOIN users c ON i.creator_id = c.id
+                $whereClause 
+                ORDER BY $orderClause";
+                
         $stmt = $db->prepare($sql);
-        $stmt->execute([$currentUserId]);
-        $taskLists = $stmt->fetchAll();
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+    
+    public function index($projectId) {
+        Auth::requireLogin();
+        $project = $this->getProject($projectId);
+        if (!$project) die("Project not found");
+
+        // Handle View Mode Persistence
+        if (isset($_GET['view']) && $_GET['view'] === 'list') {
+            $_SESSION['task_view_mode'] = 'list';
+        } elseif (isset($_SESSION['task_view_mode']) && $_SESSION['task_view_mode'] === 'kanban') {
+            header("Location: /projects/$projectId/kanban");
+            exit;
+        } else {
+            $_SESSION['task_view_mode'] = 'list';
+        }
+
+        // Handle Sort Persistence
+        if (isset($_GET['sort'])) {
+            $sort = $_GET['sort'];
+            $dir = $_GET['dir'] ?? 'DESC';
+            $_SESSION['task_sort'] = $sort;
+            $_SESSION['task_dir'] = $dir;
+        } elseif (isset($_SESSION['task_sort'])) {
+            $sort = $_SESSION['task_sort'];
+            $dir = $_SESSION['task_dir'] ?? 'DESC';
+        } else {
+            $sort = 'created_at';
+            $dir = 'DESC';
+        }
+
+        if (isset($_GET['hide_completed'])) {
+            $_SESSION['hide_completed'] = $_GET['hide_completed'];
+        }
+        
+        $hideCompletedVal = $_SESSION['hide_completed'] ?? '1';
+        $hideCompleted = $hideCompletedVal == '1';
+
+        $onlyMyIssues = isset($_GET['my_issues']) && $_GET['my_issues'] == '1';
+
+        $tasks = $this->getIssues($projectId, "$sort $dir", $hideCompleted, $onlyMyIssues);
+        
+        $users = $this->getAllUsers(); // For assignment in modals if needed
 
         require __DIR__ . '/../Views/tasks/index.php';
     }
 
-    public function createList() {
+    public function kanban($projectId) {
         Auth::requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $title = $_POST['title'];
-            $ownerId = Auth::user()['id'];
+        
+        // Persist Kanban View Mode
+        $_SESSION['task_view_mode'] = 'kanban';
 
-            $db = Database::connect();
-            $stmt = $db->prepare("INSERT INTO task_lists (title, owner_id) VALUES (?, ?)");
-            $stmt->execute([$title, $ownerId]);
+        $project = $this->getProject($projectId);
+        if (!$project) die("Project not found");
 
-            Logger::log('Task List Created', "Task List: $title");
-            header('Location: /tasks');
+        $tasks = $this->getIssues($projectId, 'sort_order ASC');
+        $columns = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', "WND"];
+        
+        // Group by status
+        $kanbanData = array_fill_keys($columns, []);
+        foreach ($tasks as $task) {
+            $status = $task['status'];
+            if (!isset($kanbanData[$status])) $status = 'Unassigned';
+            $kanbanData[$status][] = $task;
         }
+
+        $users = $this->getAllUsers();
+        
+        require __DIR__ . '/../Views/tasks/kanban.php';
     }
 
-    public function updateList() {
+    public function create() {
         Auth::requireLogin();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_POST['id'];
+            $projectId = $_POST['project_id'];
             $title = $_POST['title'];
+            $type = $_POST['type'] ?? 'Bug';
+            $priority = $_POST['priority'] ?? 'Medium';
+            $description = $_POST['description']; // HTML from Quill
+            $assignedTo = !empty($_POST['assigned_to']) ? $_POST['assigned_to'] : null;
+            $status = $_POST['status'] ?? 'Unassigned';
+            $creatorId = Auth::user()['id'];
 
             $db = Database::connect();
-            $currentUserId = (int)Auth::user()['id'];
-
-            // Verify that the user owns the list
-            $listCheckStmt = $db->prepare("SELECT id FROM task_lists WHERE id = ? AND owner_id = ?");
-            $listCheckStmt->execute([$id, $currentUserId]);
-            $list = $listCheckStmt->fetch();
-
-            if (!$list) {
-                header('Location: /tasks');
-                exit;
+            $stmt = $db->prepare("INSERT INTO tasks (project_id, title, type, priority, description, creator_id, assigned_to_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([$projectId, $title, $type, $priority, $description, $creatorId, $assignedTo, $status]);
+            
+            $taskId = $db->lastInsertId();
+            Logger::log('Task Created', "Task: $title ($type) in Project ID: $projectId");
+            
+            // Notification
+            if ($assignedTo) {
+                try {
+                    (new NotificationService())->sendAssignmentNotification($taskId, $assignedTo, $creatorId);
+                } catch (Exception $e) {
+                    Logger::log('Notification Error', $e->getMessage());
+                }
             }
 
-            $stmt = $db->prepare("UPDATE task_lists SET title = ? WHERE id = ?");
-            $stmt->execute([$title, $id]);
-
-            Logger::log('Task List Updated', "Task List ID: $id");
-            header('Location: /tasks');
+            header("Location: /projects/$projectId");
         }
     }
 
-    public function deleteList() {
-        Auth::requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_POST['id'];
-            $db = Database::connect();
-            $currentUserId = (int)Auth::user()['id'];
-
-            // Verify that the user owns the list
-            $listCheckStmt = $db->prepare("SELECT id FROM task_lists WHERE id = ? AND owner_id = ?");
-            $listCheckStmt->execute([$id, $currentUserId]);
-            $list = $listCheckStmt->fetch();
-
-            if (!$list) {
-                header('Location: /tasks');
-                exit;
-            }
-
-            $stmt = $db->prepare("DELETE FROM task_lists WHERE id = ?");
-            $stmt->execute([$id]);
-
-            Logger::log('Task List Deleted', "Task List ID: $id");
-            header('Location: /tasks');
-        }
-    }
-
-    public function listTasks($listId) {
+    public function show($id) {
         Auth::requireLogin();
         $db = Database::connect();
-        $currentUserId = (int)Auth::user()['id'];
+        
+        // Get Task
+        $stmt = $db->prepare("
+            SELECT i.*, u.username as assigned_to_name, c.username as creator_name, p.name as project_name
+            FROM tasks i 
+            LEFT JOIN users u ON i.assigned_to_id = u.id 
+            JOIN users c ON i.creator_id = c.id
+            JOIN projects p ON i.project_id = p.id
+            WHERE i.id = ?
+        ");
+        $stmt->execute([$id]);
+        $task = $stmt->fetch();
+        
+        if (!$task) die("Task not found");
 
-        // Fetch the task list
-        $listSql = "SELECT * FROM task_lists WHERE id = ? AND owner_id = ?";
-        $listStmt = $db->prepare($listSql);
-        $listStmt->execute([$listId, $currentUserId]);
-        $taskList = $listStmt->fetch();
+        // Get Comments
+        $stmt = $db->prepare("
+            SELECT c.*, u.username 
+            FROM comments c 
+            JOIN users u ON c.user_id = u.id 
+            WHERE c.task_id = ? 
+            ORDER BY c.created_at ASC
+        ");
+        $stmt->execute([$id]);
+        $comments = $stmt->fetchAll();
 
-        if (!$taskList) {
-            header('Location: /tasks');
+        require __DIR__ . '/../Views/tasks/show.php';
+    }
+
+    public function edit($id) {
+        Auth::requireLogin();
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT * FROM tasks WHERE id = ?");
+        $stmt->execute([$id]);
+        $task = $stmt->fetch();
+        
+        if (!$task) die("Task not found");
+        
+        $project = $this->getProject($task['project_id']);
+        $users = $this->getAllUsers();
+
+        // Get Comments
+        $stmt = $db->prepare("
+            SELECT c.*, u.username 
+            FROM comments c 
+            JOIN users u ON c.user_id = u.id 
+            WHERE c.task_id = ? 
+            ORDER BY c.created_at ASC
+        ");
+        $stmt->execute([$id]);
+        $comments = $stmt->fetchAll();
+
+        $incompleteSubtasksStmt = $db->prepare("SELECT COUNT(*) FROM sub_tasks WHERE task_id = ? AND is_completed = 0");
+        $incompleteSubtasksStmt->execute([$id]);
+        $incompleteSubtasksCount = (int)$incompleteSubtasksStmt->fetchColumn();
+
+        require __DIR__ . '/../Views/tasks/edit.php';
+    }
+
+    public function update($id) {
+        Auth::requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $title = $_POST['title'];
+            $type = $_POST['type'];
+            $priority = $_POST['priority'];
+            $description = $_POST['description'];
+            $assignedTo = !empty($_POST['assigned_to']) ? $_POST['assigned_to'] : null;
+            $status = $_POST['status'];
+
+            $db = Database::connect();
+            $stmt = $db->prepare("SELECT status, assigned_to_id FROM tasks WHERE id = ?");
+            $stmt->execute([$id]);
+            $currentTask = $stmt->fetch();
+
+            if ($currentTask && $currentTask['status'] !== $status) {
+                // Status changed, apply auto-assign logic if applicable
+                $newAssignee = $this->getAutoAssignUser($status);
+                if ($newAssignee) {
+                    $assignedTo = $newAssignee;
+                }
+            }
+
+            if ($status === 'Completed') {
+                $incompleteSubtasksStmt = $db->prepare("SELECT COUNT(*) FROM sub_tasks WHERE task_id = ? AND is_completed = 0");
+                $incompleteSubtasksStmt->execute([$id]);
+                $incompleteCount = (int)$incompleteSubtasksStmt->fetchColumn();
+                if ($incompleteCount > 0) {
+                    if (isset($_POST['force_complete_subtasks']) && $_POST['force_complete_subtasks'] == 1) {
+                        $db->prepare("UPDATE sub_tasks SET is_completed = 1 WHERE task_id = ?")->execute([$id]);
+                    } else {
+                        header('Location: /tasks/' . $id . '/edit');
+                        exit;
+                    }
+                }
+            }
+
+            $stmt = $db->prepare("UPDATE tasks SET title = ?, type = ?, priority = ?, description = ?, assigned_to_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$title, $type, $priority, $description, $assignedTo, $status, $id]);
+
+            // Notification
+            if ($assignedTo && $assignedTo != $currentTask['assigned_to_id']) {
+                try {
+                    (new NotificationService())->sendAssignmentNotification($id, $assignedTo, Auth::user()['id']);
+                } catch (Exception $e) {
+                    Logger::log('Notification Error', $e->getMessage());
+                }
+            }
+
+            // Check if the user came from the dashboard to determine redirect location
+            $referrer = $_POST['referrer'] ?? $_SERVER['HTTP_REFERER'] ?? '';
+            if (strpos($referrer, '/dashboard') !== false) {
+                header("Location: /dashboard");
+            } else {
+                // Fetch project ID for redirection to project page
+                $stmt = $db->prepare("SELECT project_id FROM tasks WHERE id = ?");
+                $stmt->execute([$id]);
+                $task = $stmt->fetch();
+
+                header("Location: /projects/" . $task['project_id']);
+            }
+        }
+    }
+
+    public function delete($id) {
+        Auth::requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $db = Database::connect();
+            
+            // Get project ID before delete for redirect
+            $stmt = $db->prepare("SELECT project_id FROM tasks WHERE id = ?");
+            $stmt->execute([$id]);
+            $task = $stmt->fetch();
+            
+            if ($task) {
+                $stmt = $db->prepare("DELETE FROM tasks WHERE id = ?");
+                $stmt->execute([$id]);
+                header("Location: /projects/" . $task['project_id']);
+            } else {
+                die("Task not found");
+            }
+        }
+    }
+
+    public function updateStatus() {
+        Auth::requireLogin();
+        $input = json_decode(file_get_contents('php://input'), true);
+        if ($input && isset($input['issue_id']) && isset($input['status'])) {
+            $db = Database::connect();
+            $taskId = $input['issue_id']; // For JS compatibility, handle issue_id parameter
+            $status = $input['status'];
+
+            if ($status === 'Completed') {
+                $incompleteSubtasksStmt = $db->prepare("SELECT COUNT(*) FROM sub_tasks WHERE task_id = ? AND is_completed = 0");
+                $incompleteSubtasksStmt->execute([$taskId]);
+                $incompleteCount = (int)$incompleteSubtasksStmt->fetchColumn();
+                if ($incompleteCount > 0) {
+                    if (isset($input['force_complete_subtasks']) && $input['force_complete_subtasks'] == true) {
+                        $db->prepare("UPDATE sub_tasks SET is_completed = 1 WHERE task_id = ?")->execute([$taskId]);
+                    } else {
+                        header('Content-Type: application/json');
+                        echo json_encode([
+                            'error' => 'incomplete_subtasks',
+                            'count' => $incompleteCount
+                        ]);
+                        exit;
+                    }
+                }
+            }
+            
+            // Auto-assign logic
+            $assignedToUpdate = "";
+            $params = [$status];
+            
+            $newAssignee = $this->getAutoAssignUser($status);
+            if ($newAssignee) {
+                $assignedToUpdate = ", assigned_to_id = ?";
+                $params[] = $newAssignee;
+            }
+            
+            $params[] = $taskId;
+
+            $stmt = $db->prepare("UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP $assignedToUpdate WHERE id = ?");
+            $stmt->execute($params);
+
+            if ($newAssignee) {
+                try {
+                    (new NotificationService())->sendAssignmentNotification($taskId, $newAssignee, Auth::user()['id']);
+                } catch (Exception $e) {
+                    Logger::log('Notification Error', $e->getMessage());
+                }
+            }
+
+            echo json_encode(['success' => true]);
+        }
+    }
+
+    public function reorder() {
+        Auth::requireLogin();
+        $input = json_decode(file_get_contents('php://input'), true);
+        if ($input && isset($input['order'])) {
+            $db = Database::connect();
+            $stmt = $db->prepare("UPDATE tasks SET sort_order = ? WHERE id = ?");
+            foreach ($input['order'] as $index => $id) {
+                $stmt->execute([$index, $id]);
+            }
+            echo json_encode(['success' => true]);
+        }
+    }
+
+    private function getAllUsers() {
+        $db = Database::connect();
+        return $db->query("SELECT id, username FROM users ORDER BY username")->fetchAll();
+    }
+
+    private function getAutoAssignUser($status) {
+        $settingKey = null;
+        if ($status === 'Ready for QA') {
+            $settingKey = 'auto_assign_qa';
+        } elseif ($status === 'In Progress') {
+            $settingKey = 'auto_assign_coding';
+        }
+        
+        if ($settingKey) {
+            return Settings::get($settingKey);
+        }
+        return null;
+    }
+
+    public function getSubTasks() {
+        Auth::requireLogin();
+        $taskId = $_GET['issue_id'] ?? $_GET['task_id'] ?? null;
+        if (!$taskId) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing task_id']);
             exit;
         }
 
-        // Fetch all tasks in this list
-        $sql = "
-            SELECT t.*, u.username as assigned_to_name, u.timezone as assignee_timezone
-            FROM tasks t
-            LEFT JOIN users u ON t.assigned_to_id = u.id
-            WHERE t.list_id = ?
-            ORDER BY t.created_at DESC
-        ";
-
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$listId]);
-        $tasks = $stmt->fetchAll();
-
-        // Calculate next occurrence for each task
-        for ($i = 0; $i < count($tasks); $i++) {
-            if ($tasks[$i]['is_one_time'] == 1) {
-                $tasks[$i]['next_occurrence'] = 'Now';
-            } else {
-                $assigneeTimezone = new DateTimeZone($tasks[$i]['assignee_timezone'] ?? 'UTC');
-                $now = new DateTime('now', $assigneeTimezone);
-                $startDate = new DateTime($tasks[$i]['start_date'] ?? date('Y-m-d H:i:s'), $assigneeTimezone);
-
-                // If start date is in the future, return that date
-                if ($startDate > $now) {
-                    $tasks[$i]['next_occurrence'] = $startDate->format('M j, Y g:i A');
-                } else {
-                    // Check the last time this specific task was added to the inbox
-                    $lastAddedSql = "
-                        SELECT MAX(ui.due_at) as last_added
-                        FROM user_inbox ui
-                        WHERE ui.task_id = ?
-                    ";
-                    $lastAddedStmt = $db->prepare($lastAddedSql);
-                    $lastAddedStmt->execute([$tasks[$i]['id']]);
-                    $lastAddedResult = $lastAddedStmt->fetch();
-
-                    $lastAdded = $lastAddedResult['last_added'] ? new DateTime($lastAddedResult['last_added'], $assigneeTimezone) : $startDate;
-
-                    // Calculate next due date based on recurrence
-                    $nextDue = clone $lastAdded;
-
-                    // Loop until we find an occurrence that is in the future relative to now
-                    // This handles cases where we want to see the *next* due date if the current one is passed
-                    // or the *current* due date if it hasn't passed yet.
-                    while ($nextDue <= $now) {
-                        $recurringValue = $tasks[$i]['recurring_value'] ?? 1;
-                        switch ($tasks[$i]['recurring_period']) {
-                            case 'daily':
-                                $nextDue->modify('+' . $recurringValue . ' day');
-                                break;
-                            case 'weekly':
-                                $nextDue->modify('+' . $recurringValue . ' week');
-                                break;
-                            case 'monthly':
-                                $nextDue->modify('+' . $recurringValue . ' month');
-                                break;
-                            case 'yearly':
-                                $nextDue->modify('+' . $recurringValue . ' year');
-                                break;
-                            default:
-                                break 2; // Break out of switch and while
-                        }
-                    }
-
-                    $tasks[$i]['next_occurrence'] = $nextDue->format('M j, Y g:i A');
-                }
-            }
-        }
-
-        // Fetch all users for assignment
-        $users = $db->query("SELECT id, username FROM users ORDER BY username")->fetchAll();
-
-        require __DIR__ . '/../Views/tasks/list.php';
-    }
-
-    public function createTask() {
-        Auth::requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $listId = $_POST['list_id'];
-            $title = $_POST['title'];
-            $description = $_POST['description'] ?? '';
-            $assignedToId = $_POST['assigned_to_id'] ?? Auth::user()['id'];
-            $priority = $_POST['priority'] ?? 'Medium';
-            $isOneTime = isset($_POST['is_one_time']) ? 1 : 0;
-            $recurringPeriod = $_POST['recurring_period'] ?? null;
-            $recurringValue = $_POST['recurring_value'] ?? 1;
-            $startDate = $_POST['start_date'] ?? null;
-
-            $db = Database::connect();
-            $currentUserId = (int)Auth::user()['id'];
-
-            // Verify that the user owns the list
-            $listCheckStmt = $db->prepare("SELECT id FROM task_lists WHERE id = ? AND owner_id = ?");
-            $listCheckStmt->execute([$listId, $currentUserId]);
-            $list = $listCheckStmt->fetch();
-
-            if (!$list) {
-                header('Location: /tasks');
-                exit;
-            }
-
-            $stmt = $db->prepare("
-                INSERT INTO tasks (list_id, title, description, assigned_to_id, priority, is_one_time, recurring_period, recurring_value, start_date)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
-            $stmt->execute([$listId, $title, $description, $assignedToId, $priority, $isOneTime, $recurringPeriod, $recurringValue, $startDate]);
-
-            $taskId = $db->lastInsertId();
-
-            // Add to user's inbox if it's a one-time task or if it's the start date for recurring
-            $now = new DateTime();
-            $today = (clone $now)->setTime(0, 0, 0);
-            $startDay = $startDate ? (clone new DateTime($startDate))->setTime(0, 0, 0) : null;
-
-            if ($isOneTime || (!$isOneTime && $startDay && $startDay <= $today)) {
-                // Calculate due_at: null for one-time tasks, next occurrence for recurring tasks
-                $dueAt = $isOneTime ? null : $this->calculateNextOccurrence($db, $taskId);
-                $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at, status) VALUES (?, ?, ?, 'incomplete')");
-                $inboxStmt->execute([$assignedToId, $taskId, $dueAt]);
-            }
-
-            Logger::log('Task Created', "Task: $title in List ID: $listId");
-            header('Location: /tasks/list/' . $listId);
-        }
-    }
-
-    public function updateTask() {
-        Auth::requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_POST['id'];
-            $listId = $_POST['list_id'];
-            $title = $_POST['title'];
-            $description = $_POST['description'] ?? '';
-            $assignedToId = $_POST['assigned_to_id'] ?? Auth::user()['id'];
-            $priority = $_POST['priority'] ?? 'Medium';
-            $isOneTime = isset($_POST['is_one_time']) ? 1 : 0;
-            $recurringPeriod = $_POST['recurring_period'] ?? null;
-            $recurringValue = $_POST['recurring_value'] ?? 1;
-            $startDate = $_POST['start_date'] ?? null;
-            $status = $_POST['status'] ?? 'incomplete';
-
-            $db = Database::connect();
-            $currentUserId = (int)Auth::user()['id'];
-
-            // Verify that the user owns the list that contains this task
-            $listCheckStmt = $db->prepare("SELECT tl.id FROM task_lists tl JOIN tasks t ON t.list_id = tl.id WHERE t.id = ? AND tl.owner_id = ?");
-            $listCheckStmt->execute([$id, $currentUserId]);
-            $list = $listCheckStmt->fetch();
-
-            if (!$list) {
-                header('Location: /tasks');
-                exit;
-            }
-
-            $stmt = $db->prepare("
-                UPDATE tasks
-                SET title = ?, description = ?, assigned_to_id = ?, priority = ?,
-                    is_one_time = ?, recurring_period = ?, recurring_value = ?, start_date = ?, status = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE id = ?
-            ");
-            $stmt->execute([$title, $description, $assignedToId, $priority, $isOneTime, $recurringPeriod, $recurringValue, $startDate, $status, $id]);
-
-            Logger::log('Task Updated', "Task ID: $id");
-            header('Location: /tasks/list/' . $listId);
-        }
-    }
-
-    public function deleteTask() {
-        Auth::requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_POST['id'];
-            $listId = $_POST['list_id'];
-            $db = Database::connect();
-            $currentUserId = (int)Auth::user()['id'];
-
-            // Verify that the user owns the list that contains this task
-            $listCheckStmt = $db->prepare("SELECT tl.id FROM task_lists tl JOIN tasks t ON t.list_id = tl.id WHERE t.id = ? AND tl.owner_id = ?");
-            $listCheckStmt->execute([$id, $currentUserId]);
-            $list = $listCheckStmt->fetch();
-
-            if (!$list) {
-                header('Location: /tasks');
-                exit;
-            }
-
-            // Delete from user inbox as well
-            $inboxStmt = $db->prepare("DELETE FROM user_inbox WHERE task_id = ?");
-            $inboxStmt->execute([$id]);
-
-            $stmt = $db->prepare("DELETE FROM tasks WHERE id = ?");
-            $stmt->execute([$id]);
-
-            Logger::log('Task Deleted', "Task ID: $id");
-            header('Location: /tasks/list/' . $listId);
-        }
-    }
-
-    public function updateTaskStatus() {
-        Auth::requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id = $_POST['id'];
-            $status = $_POST['status'];
-            $listId = $_POST['list_id'] ?? null;
-            $inboxId = $_POST['inbox_id'] ?? null;
-
-            $db = Database::connect();
-            $currentUserId = (int)Auth::user()['id'];
-
-            // Get task info to verify permissions (allow Owner OR Assignee)
-            $stmt = $db->prepare("
-                SELECT t.id, t.title, t.assigned_to_id, t.is_one_time, tl.owner_id 
-                FROM tasks t 
-                JOIN task_lists tl ON t.list_id = tl.id 
-                WHERE t.id = ?
-            ");
-            $stmt->execute([$id]);
-            $taskInfo = $stmt->fetch();
-
-            if (!$taskInfo) {
-                // Task not found
-                header('Location: /tasks');
-                exit;
-            }
-
-            // Check permissions: Must be List Owner OR Assigned User
-            if ($taskInfo['owner_id'] !== $currentUserId && $taskInfo['assigned_to_id'] !== $currentUserId) {
-                Logger::log('Unauthorized Task Update', "User $currentUserId attempted to update Task ID: $id without permission.");
-                header('Location: /tasks');
-                exit;
-            }
-
-            // 1. Update Inbox Item Status
-            // If we have a specific inbox_id, update only that one
-            if ($inboxId) {
-                $inboxStmt = $db->prepare("UPDATE user_inbox SET status = ? WHERE id = ? AND user_id = ?");
-                $inboxStmt->execute([$status, $inboxId, $currentUserId]);
-            } else {
-                // Fallback (e.g., from Task List view where specific inbox item might not be known)
-                // We update all incomplete inbox items for this task for this user
-                // Note: If user is owner but not assignee, they might be updating status for the assignee.
-                // In that case, we should update the assignee's inbox item?
-                // The original logic updated inbox items where user_id = currentUserId.
-                // If I am the owner updating a task assigned to someone else, I probably want to update their inbox item status?
-                // But the original code was: WHERE task_id = ? AND user_id = ?
-                
-                // Let's stick to updating items where the *inbox owner* matches the *current user* for now to be safe,
-                // OR if I am the list owner, maybe I can update any inbox item for this task? 
-                // For simplicity and safety (preventing side effects), let's stick to updating the inbox item 
-                // associated with the current user if they are the assignee.
-                
-                // However, if I am the list owner and I mark a task as 'completed', it should probably mark it for the assignee.
-                // But the system seems designed where 'user_inbox' tracks individual user's view.
-                
-                // Let's refine: If I am the assignee, update my inbox.
-                if ($taskInfo['assigned_to_id'] === $currentUserId) {
-                     $inboxStmt = $db->prepare("UPDATE user_inbox SET status = ? WHERE task_id = ? AND user_id = ? AND status = 'incomplete'");
-                     $inboxStmt->execute([$status, $id, $currentUserId]);
-                }
-                // If I am the owner but NOT the assignee, I might be "closing" the task globally.
-                // But 'user_inbox' is per user.
-                // The original code only updated `user_inbox` where `user_id = $currentUserId`.
-                // We will keep that behavior: You update your own view of the task in the inbox.
-            }
-
-            // 2. Update Parent Task Status (Only for One-Time Tasks)
-            // This affects the global task status.
-            if ($taskInfo['is_one_time'] == 1) {
-                $stmt = $db->prepare("UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
-                $stmt->execute([$status, $id]);
-            }
-
-            Logger::log('Task Status Updated', "Task: '{$taskInfo['title']}' (ID: $id) marked as '$status' by User ID: $currentUserId");
-
-            // If the task is being marked as incomplete from a completed/ND/WND state,
-            // and it's a one-time task, we might need to reactivate it.
-            // But since we are now driving from inbox status, if we reactivate a one-time task via this method,
-            // we should ensure an inbox item exists.
-            
-            if ($status === 'incomplete' && $taskInfo['is_one_time'] == 1) {
-                // Check if active inbox item exists
-                $checkStmt = $db->prepare("SELECT COUNT(*) as count FROM user_inbox WHERE task_id = ? AND user_id = ? AND status = 'incomplete'");
-                $checkStmt->execute([$id, $taskInfo['assigned_to_id']]);
-                if ($checkStmt->fetch()['count'] == 0) {
-                     // Add back to inbox
-                     $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at, status) VALUES (?, ?, ?, 'incomplete')");
-                     $inboxStmt->execute([$taskInfo['assigned_to_id'], $id, null]);
-                }
-            }
-
-            // Redirect appropriately based on context
-            $redirectTo = $_POST['redirect_to'] ?? null;
-            if ($redirectTo === 'dashboard') {
-                header('Location: /dashboard');
-            } elseif ($listId) {
-                header('Location: /tasks/list/' . $listId);
-            } else {
-                header('Location: /dashboard');
-            }
-        }
-    }
-
-    public function inbox() {
-        Auth::requireLogin();
         $db = Database::connect();
-        $currentUserId = (int)Auth::user()['id'];
+        $stmt = $db->prepare("SELECT * FROM sub_tasks WHERE task_id = ? ORDER BY created_at ASC");
+        $stmt->execute([$taskId]);
+        $subTasks = $stmt->fetchAll();
 
-        // Fetch tasks in the user's inbox
-        $sql = "
-            SELECT t.*, tl.title as list_title, u.username as assigned_by_name, ui.due_at, ui.status as inbox_status, ui.id as inbox_id
-            FROM user_inbox ui
-            JOIN tasks t ON ui.task_id = t.id
-            JOIN task_lists tl ON t.list_id = tl.id
-            LEFT JOIN users u ON tl.owner_id = u.id
-            WHERE ui.user_id = ? AND ui.status = 'incomplete'
-            ORDER BY ui.created_at DESC
-        ";
-
-        $stmt = $db->prepare($sql);
-        $stmt->execute([$currentUserId]);
-        $inboxTasks = $stmt->fetchAll();
-
-        require __DIR__ . '/../Views/tasks/inbox.php';
+        header('Content-Type: application/json');
+        echo json_encode($subTasks);
+        exit;
     }
 
-    public function markInboxCompleted() {
+    public function createSubTask() {
         Auth::requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $taskId = $_POST['task_id'];
-            $currentUserId = (int)Auth::user()['id'];
-            
-            $db = Database::connect();
-            $stmt = $db->prepare("UPDATE user_inbox SET status = 'completed' WHERE user_id = ? AND task_id = ?");
-            $stmt->execute([$currentUserId, $taskId]);
+        $data = json_decode(file_get_contents('php://input'), true);
+        $taskId = $data['issue_id'] ?? $data['task_id'] ?? null;
+        $description = trim($data['description'] ?? '');
 
-            header('Location: /tasks/inbox');
+        if (!$taskId || !$description) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields']);
+            exit;
         }
-    }
 
-    public function markInboxAllCompleted() {
-        Auth::requireLogin();
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $currentUserId = (int)Auth::user()['id'];
-            
-            $db = Database::connect();
-            $stmt = $db->prepare("UPDATE user_inbox SET status = 'completed' WHERE user_id = ? AND status = 'incomplete'");
-            $stmt->execute([$currentUserId]);
-
-            header('Location: /tasks/inbox');
-        }
-    }
-
-    public function processRecurringTasks() {
-        // This method would be called by a cron job or scheduled task
         $db = Database::connect();
-
-        // Get all recurring tasks that should be added to inbox based on their schedule
-        $sql = "
-            SELECT t.*, tl.owner_id as list_owner_id
-            FROM tasks t
-            JOIN task_lists tl ON t.list_id = tl.id
-            WHERE t.is_one_time = 0
-            AND t.start_date IS NOT NULL
-            AND t.status = 'incomplete'
-        ";
-
-        $stmt = $db->prepare($sql);
-        $stmt->execute();
-        $recurringTasks = $stmt->fetchAll();
-
-        foreach ($recurringTasks as $task) {
-            // Determine if we should add this task to the inbox based on recurrence rules
-            // Use a loop to backfill multiple missing occurrences if necessary
-            while ($this->shouldAddRecurringTask($db, $task)) {
-                // Calculate due_at for recurring task
-                $dueAt = $this->calculateNextOccurrence($db, $task['id']);
-                
-                if ($dueAt) {
-                    // Add to user's inbox
-                    $inboxStmt = $db->prepare("INSERT INTO user_inbox (user_id, task_id, due_at, status) VALUES (?, ?, ?, 'incomplete')");
-                    $inboxStmt->execute([$task['assigned_to_id'], $task['id'], $dueAt]);
-
-                    Logger::log('Recurring Task Generated', "Task: '{$task['title']}' (ID: {$task['id']}) assigned to User ID: {$task['assigned_to_id']}, Due: {$dueAt}");
-                } else {
-                    break;
-                }
-            }
+        $stmt = $db->prepare("SELECT id FROM tasks WHERE id = ?");
+        $stmt->execute([$taskId]);
+        if (!$stmt->fetch()) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Task not found']);
+            exit;
         }
+
+        $insertStmt = $db->prepare("INSERT INTO sub_tasks (task_id, description, is_completed) VALUES (?, ?, 0)");
+        $insertStmt->execute([$taskId, $description]);
+        $newId = $db->lastInsertId();
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'id' => $newId,
+            'task_id' => $taskId,
+            'description' => $description,
+            'is_completed' => 0
+        ]);
+        exit;
     }
 
-    private function shouldAddRecurringTask($db, $task) {
-        $now = new DateTime();
-        $startDate = new DateTime($task['start_date']);
+    public function toggleSubTask() {
+        Auth::requireLogin();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $id = $data['id'] ?? null;
+        $isCompleted = isset($data['is_completed']) ? (int)$data['is_completed'] : null;
 
-        // If start date is in the future, don't add yet
-        if ($startDate > $now) {
-            return false;
+        if (!$id || $isCompleted === null) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields']);
+            exit;
         }
 
-        // Check the last time this task was added to the inbox
-        $lastAddedSql = "
-            SELECT MAX(ui.due_at) as last_added
-            FROM user_inbox ui
-            JOIN tasks t2 ON ui.task_id = t2.id
-            WHERE t2.list_id = ? AND t2.title = ?
-        ";
-        $lastAddedStmt = $db->prepare($lastAddedSql);
-        $lastAddedStmt->execute([$task['list_id'], $task['title']]);
-        $lastAddedResult = $lastAddedStmt->fetch();
-
-        $lastAdded = $lastAddedResult['last_added'] ? new DateTime($lastAddedResult['last_added']) : $startDate;
-
-        // Calculate next due date based on recurrence
-        $nextDue = clone $lastAdded;
-        $recurringValue = $task['recurring_value'] ?? 1;
-
-        switch ($task['recurring_period']) {
-            case 'daily':
-                $nextDue->modify('+' . $recurringValue . ' day');
-                break;
-            case 'weekly':
-                $nextDue->modify('+' . $recurringValue . ' week');
-                break;
-            case 'monthly':
-                $nextDue->modify('+' . $recurringValue . ' month');
-                break;
-            case 'yearly':
-                $nextDue->modify('+' . $recurringValue . ' year');
-                break;
-            default:
-                return false;
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT id FROM sub_tasks WHERE id = ?");
+        $stmt->execute([$id]);
+        if (!$stmt->fetch()) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Sub-task not found']);
+            exit;
         }
 
-        // Return true if it's time to add the task again
-        return $nextDue <= $now;
+        $updateStmt = $db->prepare("UPDATE sub_tasks SET is_completed = ? WHERE id = ?");
+        $updateStmt->execute([$isCompleted, $id]);
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
     }
 
-    private function calculateNextOccurrence($db, $taskId) {
-        // Get task details with assignee timezone
-        $taskSql = "
-            SELECT t.*, u.timezone as assignee_timezone 
-            FROM tasks t 
-            LEFT JOIN users u ON t.assigned_to_id = u.id 
-            WHERE t.id = ?
-        ";
-        $taskStmt = $db->prepare($taskSql);
-        $taskStmt->execute([$taskId]);
-        $task = $taskStmt->fetch();
+    public function deleteSubTask() {
+        Auth::requireLogin();
+        $data = json_decode(file_get_contents('php://input'), true);
+        $id = $data['id'] ?? null;
 
-        if (!$task || $task['is_one_time'] == 1) {
-            return null; // One-time tasks have null due_at
+        if (!$id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing required fields']);
+            exit;
         }
 
-        $assigneeTimezone = new DateTimeZone($task['assignee_timezone'] ?? 'UTC');
-        $now = new DateTime('now', $assigneeTimezone);
-        $startDate = new DateTime($task['start_date'] ?? date('Y-m-d H:i:s'), $assigneeTimezone);
-
-        // If start date is in the future, return that date
-        if ($startDate > $now) {
-            return $startDate->format('Y-m-d H:i:s');
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT id FROM sub_tasks WHERE id = ?");
+        $stmt->execute([$id]);
+        if (!$stmt->fetch()) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Sub-task not found']);
+            exit;
         }
 
-        // Check the last time this specific task was added to the inbox
-        $lastAddedSql = "
-            SELECT MAX(ui.due_at) as last_added
-            FROM user_inbox ui
-            WHERE ui.task_id = ?
-        ";
-        $lastAddedStmt = $db->prepare($lastAddedSql);
-        $lastAddedStmt->execute([$taskId]);
-        $lastAddedResult = $lastAddedStmt->fetch();
+        $deleteStmt = $db->prepare("DELETE FROM sub_tasks WHERE id = ?");
+        $deleteStmt->execute([$id]);
 
-        if ($lastAddedResult['last_added']) {
-            $lastAdded = new DateTime($lastAddedResult['last_added'], $assigneeTimezone);
-            $nextDue = clone $lastAdded;
-            $recurringValue = $task['recurring_value'] ?? 1;
-            
-            switch ($task['recurring_period']) {
-                case 'daily':
-                    $nextDue->modify('+' . $recurringValue . ' day');
-                    break;
-                case 'weekly':
-                    $nextDue->modify('+' . $recurringValue . ' week');
-                    break;
-                case 'monthly':
-                    $nextDue->modify('+' . $recurringValue . ' month');
-                    break;
-                case 'yearly':
-                    $nextDue->modify('+' . $recurringValue . ' year');
-                    break;
-                default:
-                    return null;
-            }
-        } else {
-            $nextDue = $startDate;
-        }
-
-        return $nextDue->format('Y-m-d H:i:s');
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
     }
 }

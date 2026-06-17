@@ -1,4 +1,4 @@
--- Database Schema for Buggy Issue Tracker
+-- Database Schema for Buggy Task/Job Tracker
 
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS projects (
     FOREIGN KEY (owner_id) REFERENCES users(id)
 );
 
-CREATE TABLE IF NOT EXISTS issues (
+CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
     title TEXT NOT NULL,
@@ -40,17 +40,17 @@ CREATE TABLE IF NOT EXISTS issues (
 
 CREATE TABLE IF NOT EXISTS comments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    issue_id INTEGER NOT NULL,
+    task_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     comment TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS attachments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    parent_type TEXT NOT NULL, -- 'issue' or 'comment'
+    parent_type TEXT NOT NULL, -- 'task' or 'comment'
     parent_id INTEGER NOT NULL,
     file_path TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS logs (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-CREATE TABLE IF NOT EXISTS task_lists (
+CREATE TABLE IF NOT EXISTS job_lists (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     owner_id INTEGER NOT NULL,
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS task_lists (
     FOREIGN KEY (owner_id) REFERENCES users(id)
 );
 
-CREATE TABLE IF NOT EXISTS tasks (
+CREATE TABLE IF NOT EXISTS jobs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     list_id INTEGER NOT NULL,
     title TEXT NOT NULL,
@@ -88,20 +88,20 @@ CREATE TABLE IF NOT EXISTS tasks (
     status TEXT DEFAULT 'incomplete', -- incomplete, completed, ND, WND
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (list_id) REFERENCES task_lists(id) ON DELETE CASCADE,
+    FOREIGN KEY (list_id) REFERENCES job_lists(id) ON DELETE CASCADE,
     FOREIGN KEY (assigned_to_id) REFERENCES users(id)
 );
 
 CREATE TABLE IF NOT EXISTS user_inbox (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
-    task_id INTEGER NOT NULL,
+    job_id INTEGER NOT NULL,
     is_read INTEGER DEFAULT 0,
     status TEXT DEFAULT 'incomplete',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     due_at DATETIME NULL,
     FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS user_projects (
@@ -128,11 +128,11 @@ CREATE TABLE IF NOT EXISTS sessions (
     data TEXT
 );
 
-CREATE TABLE IF NOT EXISTS issue_sub_tasks (
+CREATE TABLE IF NOT EXISTS sub_tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    issue_id INTEGER NOT NULL,
+    task_id INTEGER NOT NULL,
     description TEXT NOT NULL,
     is_completed INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );

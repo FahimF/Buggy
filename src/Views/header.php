@@ -108,20 +108,20 @@ function getTypeBadgeClass($type) {
                                 try {
                                     $db = Database::connect();
                                     $userId = Auth::user()['id'];
-                                    $issueCount = $db->query("SELECT COUNT(*) as count FROM issues WHERE assigned_to_id = $userId AND status NOT IN ('Completed', 'WND')")->fetch()['count'];
+                                    $taskCount = $db->query("SELECT COUNT(*) as count FROM tasks WHERE assigned_to_id = $userId AND status NOT IN ('Completed', 'WND')")->fetch()['count'];
                                 } catch (Exception $e) {
-                                    $issueCount = 0;
+                                    $taskCount = 0;
                                 }
-                                if ($issueCount > 0) {
-                                    echo '<span class="badge bg-secondary ms-1">' . $issueCount . '</span>';
+                                if ($taskCount > 0) {
+                                    echo '<span class="badge bg-secondary ms-1">' . $taskCount . '</span>';
                                 }
                             }
                             ?>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/tasks">
-                            Tasks
+                        <a class="nav-link" href="/jobs">
+                            Jobs
                             <?php
                             if (Auth::user()) {
                                 try {

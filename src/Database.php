@@ -19,6 +19,39 @@ class Database {
     }
 
     private static function initialize() {
+        // Migration to rename old tables/columns to new unified schema (Tasks to Jobs, Issues to Tasks)
+        try {
+            $checkIssues = self::$pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='issues'")->fetch();
+            if ($checkIssues) {
+                self::$pdo->exec("ALTER TABLE task_lists RENAME TO job_lists");
+                self::$pdo->exec("ALTER TABLE tasks RENAME TO jobs");
+                try {
+                    self::$pdo->exec("ALTER TABLE user_inbox RENAME COLUMN task_id TO job_id");
+                } catch (PDOException $e) {
+                    // Ignore column rename if already done or failed
+                }
+                self::$pdo->exec("ALTER TABLE issues RENAME TO tasks");
+                self::$pdo->exec("ALTER TABLE issue_sub_tasks RENAME TO sub_tasks");
+                try {
+                    self::$pdo->exec("ALTER TABLE sub_tasks RENAME COLUMN issue_id TO task_id");
+                } catch (PDOException $e) {
+                    // Ignore column rename if already done or failed
+                }
+                try {
+                    self::$pdo->exec("ALTER TABLE comments RENAME COLUMN issue_id TO task_id");
+                } catch (PDOException $e) {
+                    // Ignore column rename if already done or failed
+                }
+                try {
+                    self::$pdo->exec("UPDATE attachments SET parent_type = 'task' WHERE parent_type = 'issue'");
+                } catch (PDOException $e) {
+                    // Ignore update if failed
+                }
+            }
+        } catch (PDOException $e) {
+            // Ignore if already migrated or errored
+        }
+
         $queries = [
             "CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,7 +71,7 @@ class Database {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (owner_id) REFERENCES users(id)
             )",
-            "CREATE TABLE IF NOT EXISTS issues (
+            "CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_id INTEGER NOT NULL,
                 title TEXT NOT NULL,
@@ -57,16 +90,16 @@ class Database {
             )",
             "CREATE TABLE IF NOT EXISTS comments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                issue_id INTEGER NOT NULL,
+                task_id INTEGER NOT NULL,
                 user_id INTEGER NOT NULL,
                 comment TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE,
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )",
             "CREATE TABLE IF NOT EXISTS attachments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                parent_type TEXT NOT NULL, -- 'issue' or 'comment'
+                parent_type TEXT NOT NULL, -- 'task' or 'comment'
                 parent_id INTEGER NOT NULL,
                 file_path TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -80,14 +113,14 @@ class Database {
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )",
-            "CREATE TABLE IF NOT EXISTS task_lists (
+            "CREATE TABLE IF NOT EXISTS job_lists (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 owner_id INTEGER NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (owner_id) REFERENCES users(id)
             )",
-            "CREATE TABLE IF NOT EXISTS tasks (
+            "CREATE TABLE IF NOT EXISTS jobs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 list_id INTEGER NOT NULL,
                 title TEXT NOT NULL,
@@ -101,19 +134,19 @@ class Database {
                 status TEXT DEFAULT 'incomplete', -- incomplete, completed, ND, WND
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (list_id) REFERENCES task_lists(id) ON DELETE CASCADE,
+                FOREIGN KEY (list_id) REFERENCES job_lists(id) ON DELETE CASCADE,
                 FOREIGN KEY (assigned_to_id) REFERENCES users(id)
             )",
             "CREATE TABLE IF NOT EXISTS user_inbox (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
-                task_id INTEGER NOT NULL,
+                job_id INTEGER NOT NULL,
                 is_read INTEGER DEFAULT 0,
                 status TEXT DEFAULT 'incomplete',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 due_at DATETIME NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id),
-                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+                FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
             )",
             "CREATE TABLE IF NOT EXISTS user_projects (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -136,13 +169,13 @@ class Database {
                 access INTEGER,
                 data TEXT
             )",
-            "CREATE TABLE IF NOT EXISTS issue_sub_tasks (
+            "CREATE TABLE IF NOT EXISTS sub_tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                issue_id INTEGER NOT NULL,
+                task_id INTEGER NOT NULL,
                 description TEXT NOT NULL,
                 is_completed INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
             )"
         ];
 
@@ -152,7 +185,7 @@ class Database {
 
         // Migration for existing tables
         try {
-            self::$pdo->exec("ALTER TABLE issues ADD COLUMN type TEXT DEFAULT 'Bug'");
+            self::$pdo->exec("ALTER TABLE tasks ADD COLUMN type TEXT DEFAULT 'Bug'");
         } catch (PDOException $e) {
             // Column likely already exists
         }
@@ -164,7 +197,7 @@ class Database {
         }
 
         try {
-            self::$pdo->exec("ALTER TABLE issues ADD COLUMN priority TEXT DEFAULT 'Medium'");
+            self::$pdo->exec("ALTER TABLE tasks ADD COLUMN priority TEXT DEFAULT 'Medium'");
         } catch (PDOException $e) {
             // Column likely already exists
         }
@@ -197,9 +230,9 @@ class Database {
             // Table likely already exists
         }
 
-        // Migrations for task management tables
+        // Migrations for job management tables
         try {
-            self::$pdo->exec("CREATE TABLE task_lists (
+            self::$pdo->exec("CREATE TABLE job_lists (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 owner_id INTEGER NOT NULL,
@@ -211,7 +244,7 @@ class Database {
         }
 
         try {
-            self::$pdo->exec("CREATE TABLE tasks (
+            self::$pdo->exec("CREATE TABLE jobs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 list_id INTEGER NOT NULL,
                 title TEXT NOT NULL,
@@ -225,7 +258,7 @@ class Database {
                 status TEXT DEFAULT 'incomplete', -- incomplete, completed, ND, WND
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (list_id) REFERENCES task_lists(id) ON DELETE CASCADE,
+                FOREIGN KEY (list_id) REFERENCES job_lists(id) ON DELETE CASCADE,
                 FOREIGN KEY (assigned_to_id) REFERENCES users(id)
             )");
         } catch (PDOException $e) {
@@ -236,12 +269,12 @@ class Database {
             self::$pdo->exec("CREATE TABLE user_inbox (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
-                task_id INTEGER NOT NULL,
+                job_id INTEGER NOT NULL,
                 is_read INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 due_at DATETIME NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id),
-                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+                FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
             )");
         } catch (PDOException $e) {
             // Table likely already exists
@@ -261,11 +294,11 @@ class Database {
             // Set status to 'completed' for read items as a baseline
             self::$pdo->exec("UPDATE user_inbox SET status = 'completed' WHERE is_read = 1");
             
-            // Sync one-time tasks: If the parent task has a specific status (ND, WND), reflect that in the inbox item
+            // Sync one-time jobs: If the parent job has a specific status (ND, WND), reflect that in the inbox item
             $sql = "
                 UPDATE user_inbox 
-                SET status = (SELECT status FROM tasks WHERE tasks.id = user_inbox.task_id)
-                WHERE task_id IN (SELECT id FROM tasks WHERE is_one_time = 1)
+                SET status = (SELECT status FROM jobs WHERE jobs.id = user_inbox.job_id)
+                WHERE job_id IN (SELECT id FROM jobs WHERE is_one_time = 1)
                 AND is_read = 1
             ";
             self::$pdo->exec($sql);
@@ -273,9 +306,9 @@ class Database {
             // Column likely already exists
         }
 
-        // Migration for recurring_value column in tasks table
+        // Migration for recurring_value column in jobs table
         try {
-            self::$pdo->exec("ALTER TABLE tasks ADD COLUMN recurring_value INTEGER DEFAULT 1");
+            self::$pdo->exec("ALTER TABLE jobs ADD COLUMN recurring_value INTEGER DEFAULT 1");
         } catch (PDOException $e) {
             // Column likely already exists
         }
@@ -291,15 +324,15 @@ class Database {
             // Table likely already exists
         }
 
-        // Migration for issue_sub_tasks table
+        // Migration for sub_tasks table
         try {
-            self::$pdo->exec("CREATE TABLE IF NOT EXISTS issue_sub_tasks (
+            self::$pdo->exec("CREATE TABLE IF NOT EXISTS sub_tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                issue_id INTEGER NOT NULL,
+                task_id INTEGER NOT NULL,
                 description TEXT NOT NULL,
                 is_completed INTEGER DEFAULT 0,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE CASCADE
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
             )");
         } catch (PDOException $e) {
             // Table likely already exists

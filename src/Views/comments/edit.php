@@ -3,7 +3,7 @@
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="/">Projects</a></li>
-    <li class="breadcrumb-item"><a href="/issues/<?= $comment['issue_id'] ?>">Back to Issue</a></li>
+    <li class="breadcrumb-item"><a href="/tasks/<?= $comment['task_id'] ?>">Back to Task</a></li>
     <li class="breadcrumb-item active" aria-current="page">Edit Comment</li>
   </ol>
 </nav>
@@ -19,7 +19,7 @@
                         <input type="hidden" name="comment" id="commentInput">
                     </div>
                     <button type="submit" class="btn btn-primary">Update Comment</button>
-                    <a href="/issues/<?= $comment['issue_id'] ?>" class="btn btn-secondary">Cancel</a>
+                    <a href="/tasks/<?= $comment['task_id'] ?>" class="btn btn-secondary">Cancel</a>
                 </form>
             </div>
         </div>

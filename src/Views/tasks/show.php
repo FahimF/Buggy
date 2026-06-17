@@ -3,8 +3,8 @@
 <nav aria-label="breadcrumb">
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="/">Projects</a></li>
-    <li class="breadcrumb-item"><a href="/projects/<?= $issue['project_id'] ?>"><?= htmlspecialchars($issue['project_name']) ?></a></li>
-    <li class="breadcrumb-item active" aria-current="page">Issue #<?= $issue['id'] ?></li>
+    <li class="breadcrumb-item"><a href="/projects/<?= $task['project_id'] ?>"><?= htmlspecialchars($task['project_name']) ?></a></li>
+    <li class="breadcrumb-item active" aria-current="page">Task #<?= $task['id'] ?></li>
   </ol>
 </nav>
 
@@ -13,12 +13,12 @@
         <div class="card mb-4">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start">
-                    <h2 class="card-title"><?= htmlspecialchars($issue['title']) ?></h2>
+                    <h2 class="card-title"><?= htmlspecialchars($task['title']) ?></h2>
                     <div class="btn-group">
-                        <a href="/issues/<?= $issue['id'] ?>/edit" class="btn btn-outline-primary">
+                        <a href="/tasks/<?= $task['id'] ?>/edit" class="btn btn-outline-primary">
                             <i class="bi bi-pencil"></i> Edit
                         </a>
-                        <form action="/issues/<?= $issue['id'] ?>/delete" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this issue?');">
+                        <form action="/tasks/<?= $task['id'] ?>/delete" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this task?');">
                             <button type="submit" class="btn btn-outline-danger">
                                 <i class="bi bi-trash"></i> Delete
                             </button>
@@ -26,17 +26,17 @@
                     </div>
                 </div>
                 <div class="mb-3 text-muted small">
-                    Created by <strong><?= htmlspecialchars($issue['creator_name']) ?></strong> on <?= date('M j, Y H:i', strtotime($issue['created_at'])) ?>
+                    Created by <strong><?= htmlspecialchars($task['creator_name']) ?></strong> on <?= date('M j, Y H:i', strtotime($task['created_at'])) ?>
                 </div>
                 <hr>
                 <div class="card-text">
-                    <?= $issue['description'] ?> <!-- Assumed safe HTML from Quill, but normally needs sanitization -->
+                    <?= $task['description'] ?> <!-- Assumed safe HTML from Quill, but normally needs sanitization -->
                 </div>
                 
                 <hr>
                 <div class="mt-4">
                     <h5>Sub-tasks</h5>
-                    <div id="issueSubtasksContainer" class="mb-3">
+                    <div id="taskSubtasksContainer" class="mb-3">
                         <!-- Loaded dynamically -->
                     </div>
                 </div>
@@ -77,7 +77,7 @@
             <div class="card-header">Add Comment</div>
             <div class="card-body">
                 <form action="/comments/create" method="post" id="addCommentForm">
-                    <input type="hidden" name="issue_id" value="<?= $issue['id'] ?>">
+                    <input type="hidden" name="task_id" value="<?= $task['id'] ?>">
                     <div class="mb-3">
                         <div id="comment-editor" style="height: 150px;"></div>
                         <input type="hidden" name="comment" id="commentInput">
@@ -96,15 +96,15 @@
                     <strong>Priority:</strong>
                     <?php 
                     $priorityClass = 'bg-secondary';
-                    if (($issue['priority'] ?? 'Medium') === 'High') $priorityClass = 'bg-danger';
-                    elseif (($issue['priority'] ?? 'Medium') === 'Medium') $priorityClass = 'bg-warning text-dark';
-                    elseif (($issue['priority'] ?? 'Medium') === 'Low') $priorityClass = 'bg-success';
+                    if (($task['priority'] ?? 'Medium') === 'High') $priorityClass = 'bg-danger';
+                    elseif (($task['priority'] ?? 'Medium') === 'Medium') $priorityClass = 'bg-warning text-dark';
+                    elseif (($task['priority'] ?? 'Medium') === 'Low') $priorityClass = 'bg-success';
                     ?>
-                    <span class="badge <?= $priorityClass ?>"><?= htmlspecialchars($issue['priority'] ?? 'Medium') ?></span>
+                    <span class="badge <?= $priorityClass ?>"><?= htmlspecialchars($task['priority'] ?? 'Medium') ?></span>
                 </li>
                 <li class="list-group-item">
                     <strong>Type:</strong>
-                    <?php if (($issue['type'] ?? 'Bug') === 'Bug'): ?>
+                    <?php if (($task['type'] ?? 'Bug') === 'Bug'): ?>
                         <span class="badge bg-danger">Bug</span>
                     <?php else: ?>
                         <span class="badge bg-info text-dark">Feature</span>
@@ -112,15 +112,15 @@
                 </li>
                 <li class="list-group-item">
                     <strong>Status:</strong>
-                    <span class="badge <?= getStatusBadgeClass($issue['status']) ?>"><?= htmlspecialchars($issue['status']) ?></span>
+                    <span class="badge <?= getStatusBadgeClass($task['status']) ?>"><?= htmlspecialchars($task['status']) ?></span>
                 </li>
                 <li class="list-group-item">
                     <strong>Assigned To:</strong>
-                    <?= $issue['assigned_to_name'] ? htmlspecialchars($issue['assigned_to_name']) : '<span class="text-muted">Unassigned</span>' ?>
+                    <?= $task['assigned_to_name'] ? htmlspecialchars($task['assigned_to_name']) : '<span class="text-muted">Unassigned</span>' ?>
                 </li>
                 <li class="list-group-item">
                     <strong>Updated:</strong>
-                    <?= date('M j, Y', strtotime($issue['updated_at'])) ?>
+                    <?= date('M j, Y', strtotime($task['updated_at'])) ?>
                 </li>
             </ul>
         </div>
@@ -145,8 +145,6 @@
         document.getElementById('addCommentForm').onsubmit = function() {
             var html = quill.root.innerHTML;
             if (quill.getText().trim().length === 0 && !html.includes('<img')) {
-                // Prevent empty submission if strictly empty
-                // But allowing image-only comments
                 alert('Please write a comment.');
                 return false;
             }
@@ -154,13 +152,13 @@
         };
 
     // Sub-tasks Logic (Read-only)
-    const issueId = <?= $issue['id'] ?>;
+    const taskId = <?= $task['id'] ?>;
 
     function loadSubtasks() {
-        const container = document.getElementById('issueSubtasksContainer');
+        const container = document.getElementById('taskSubtasksContainer');
         container.innerHTML = '<div class="text-muted small">Loading sub-tasks...</div>';
 
-        fetch('/issues/sub-tasks?issue_id=' + issueId)
+        fetch('/tasks/sub-tasks?issue_id=' + taskId)
             .then(res => res.json())
             .then(subtasks => {
                 container.innerHTML = '';

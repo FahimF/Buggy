@@ -99,31 +99,31 @@ if ($uri === '/' || $uri === '/dashboard') {
 } elseif ($uri === '/projects/unpin') {
     (new ProjectController())->unpin();
 } elseif (preg_match('#^/projects/(\d+)$#', $uri, $matches)) {
-    (new IssueController())->index($matches[1]);
+    (new TaskController())->index($matches[1]);
 } elseif (preg_match('#^/projects/(\d+)/kanban$#', $uri, $matches)) {
-    (new IssueController())->kanban($matches[1]);
-} elseif ($uri === '/issues/create') {
-    (new IssueController())->create();
-} elseif ($uri === '/issues/update_status') {
-    (new IssueController())->updateStatus();
-} elseif ($uri === '/issues/sub-tasks') {
-    (new IssueController())->getSubTasks();
-} elseif ($uri === '/issues/sub-tasks/create') {
-    (new IssueController())->createSubTask();
-} elseif ($uri === '/issues/sub-tasks/toggle') {
-    (new IssueController())->toggleSubTask();
-} elseif ($uri === '/issues/sub-tasks/delete') {
-    (new IssueController())->deleteSubTask();
-} elseif ($uri === '/issues/reorder') {
-    (new IssueController())->reorder();
-} elseif (preg_match('#^/issues/(\d+)$#', $uri, $matches)) {
-    (new IssueController())->show($matches[1]);
-} elseif (preg_match('#^/issues/(\d+)/edit$#', $uri, $matches)) {
-    (new IssueController())->edit($matches[1]);
-} elseif (preg_match('#^/issues/(\d+)/update$#', $uri, $matches)) {
-    (new IssueController())->update($matches[1]);
-} elseif (preg_match('#^/issues/(\d+)/delete$#', $uri, $matches)) {
-    (new IssueController())->delete($matches[1]);
+    (new TaskController())->kanban($matches[1]);
+} elseif ($uri === '/tasks/create') {
+    (new TaskController())->create();
+} elseif ($uri === '/tasks/update_status') {
+    (new TaskController())->updateStatus();
+} elseif ($uri === '/tasks/sub-tasks') {
+    (new TaskController())->getSubTasks();
+} elseif ($uri === '/tasks/sub-tasks/create') {
+    (new TaskController())->createSubTask();
+} elseif ($uri === '/tasks/sub-tasks/toggle') {
+    (new TaskController())->toggleSubTask();
+} elseif ($uri === '/tasks/sub-tasks/delete') {
+    (new TaskController())->deleteSubTask();
+} elseif ($uri === '/tasks/reorder') {
+    (new TaskController())->reorder();
+} elseif (preg_match('#^/tasks/(\d+)$#', $uri, $matches)) {
+    (new TaskController())->show($matches[1]);
+} elseif (preg_match('#^/tasks/(\d+)/edit$#', $uri, $matches)) {
+    (new TaskController())->edit($matches[1]);
+} elseif (preg_match('#^/tasks/(\d+)/update$#', $uri, $matches)) {
+    (new TaskController())->update($matches[1]);
+} elseif (preg_match('#^/tasks/(\d+)/delete$#', $uri, $matches)) {
+    (new TaskController())->delete($matches[1]);
 } elseif ($uri === '/comments/create') {
     (new CommentController())->create();
 } elseif (preg_match('#^/comments/(\d+)/edit$#', $uri, $matches)) {
@@ -156,32 +156,32 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new AdminController())->deleteSelectedInboxItems();
 } elseif ($uri === '/admin/inbox/clear-completed') {
     (new AdminController())->clearCompletedInboxItems();
-} elseif ($uri === '/tasks') {
-    (new TaskController())->index();
-} elseif ($uri === '/tasks/create-list') {
-    (new TaskController())->createList();
-} elseif ($uri === '/tasks/update-list') {
-    (new TaskController())->updateList();
-} elseif ($uri === '/tasks/delete-list') {
-    (new TaskController())->deleteList();
-} elseif (preg_match('#^/tasks/list/(\d+)$#', $uri, $matches)) {
-    (new TaskController())->listTasks($matches[1]);
-} elseif ($uri === '/tasks/create-task') {
-    (new TaskController())->createTask();
-} elseif ($uri === '/tasks/update-task') {
-    (new TaskController())->updateTask();
-} elseif ($uri === '/tasks/delete-task') {
-    (new TaskController())->deleteTask();
-} elseif ($uri === '/tasks/update-status') {
-    (new TaskController())->updateTaskStatus();
-} elseif ($uri === '/tasks/inbox') {
-    (new TaskController())->inbox();
-} elseif ($uri === '/tasks/mark-completed') {
-    (new TaskController())->markInboxCompleted();
-} elseif ($uri === '/tasks/mark-all-completed') {
-    (new TaskController())->markInboxAllCompleted();
-} elseif ($uri === '/tasks/process-recurring') {
-    (new TaskController())->processRecurringTasks();
+} elseif ($uri === '/jobs') {
+    (new JobController())->index();
+} elseif ($uri === '/jobs/create-list') {
+    (new JobController())->createList();
+} elseif ($uri === '/jobs/update-list') {
+    (new JobController())->updateList();
+} elseif ($uri === '/jobs/delete-list') {
+    (new JobController())->deleteList();
+} elseif (preg_match('#^/jobs/list/(\d+)$#', $uri, $matches)) {
+    (new JobController())->listTasks($matches[1]);
+} elseif ($uri === '/jobs/create-task') {
+    (new JobController())->createTask();
+} elseif ($uri === '/jobs/update-task') {
+    (new JobController())->updateTask();
+} elseif ($uri === '/jobs/delete-task') {
+    (new JobController())->deleteTask();
+} elseif ($uri === '/jobs/update-status') {
+    (new JobController())->updateTaskStatus();
+} elseif ($uri === '/jobs/inbox') {
+    (new JobController())->inbox();
+} elseif ($uri === '/jobs/mark-completed') {
+    (new JobController())->markInboxCompleted();
+} elseif ($uri === '/jobs/mark-all-completed') {
+    (new JobController())->markInboxAllCompleted();
+} elseif ($uri === '/jobs/process-recurring') {
+    (new JobController())->processRecurringTasks();
 } else {
     http_response_code(404);
     echo "404 Not Found";

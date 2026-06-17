@@ -1,16 +1,16 @@
-<div class="modal fade" id="createIssueModal" tabindex="-1">
+<div class="modal fade" id="createTaskModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <form action="/issues/create" method="post" id="createIssueForm">
+            <form action="/tasks/create" method="post" id="createTaskForm">
                 <div class="modal-header">
-                    <h5 class="modal-title">New Issue</h5>
+                    <h5 class="modal-title">New Task</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <?php if (!isset($project)): ?>
                         <div class="mb-3">
                             <label>Project</label>
-                            <select name="project_id" id="createIssueProjectId" class="form-select" required>
+                            <select name="project_id" id="createTaskProjectId" class="form-select" required>
                                 <option value="">-- Select Project --</option>
                                 <?php foreach ($projects as $p): ?>
                                     <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
@@ -18,7 +18,7 @@
                             </select>
                         </div>
                     <?php else: ?>
-                        <input type="hidden" name="project_id" id="createIssueProjectId" value="<?= $project['id'] ?>">
+                        <input type="hidden" name="project_id" id="createTaskProjectId" value="<?= $project['id'] ?>">
                     <?php endif; ?>
                     <div class="mb-3">
                         <label>Title</label>
@@ -27,7 +27,7 @@
                     <div class="row">
                         <div class="col-md-3 mb-3">
                             <label>Type</label>
-                            <select name="type" id="createIssueType" class="form-select">
+                            <select name="type" id="createTaskType" class="form-select">
                                 <option value="Bug">Bug</option>
                                 <option value="Feature">Feature</option>
                             </select>
@@ -68,7 +68,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Create Issue</button>
+                    <button type="submit" class="btn btn-primary">Create Task</button>
                 </div>
             </form>
         </div>
@@ -124,7 +124,7 @@
             });
         });
         
-        document.getElementById('createIssueForm').onsubmit = function() {
+        document.getElementById('createTaskForm').onsubmit = function() {
             document.getElementById('descriptionInput').value = quill.root.innerHTML;
         };
     });

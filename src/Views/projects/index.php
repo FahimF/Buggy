@@ -24,8 +24,8 @@
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item <?= $sort === 'created_at' ? 'active' : '' ?>" href="?sort=created_at">Newest First</a></li>
                 <li><a class="dropdown-item <?= $sort === 'updated' ? 'active' : '' ?>" href="?sort=updated">Last Updated</a></li>
-                <li><a class="dropdown-item <?= $sort === 'active_issues' ? 'active' : '' ?>" href="?sort=active_issues">Most Active Issues</a></li>
-                <li><a class="dropdown-item <?= $sort === 'my_active_issues' ? 'active' : '' ?>" href="?sort=my_active_issues">My Active Issues</a></li>
+                <li><a class="dropdown-item <?= $sort === 'active_tasks' ? 'active' : '' ?>" href="?sort=active_tasks">Most Active Tasks</a></li>
+                <li><a class="dropdown-item <?= $sort === 'my_active_tasks' ? 'active' : '' ?>" href="?sort=my_active_tasks">My Active Tasks</a></li>
                 <li><a class="dropdown-item <?= $sort === 'name' ? 'active' : '' ?>" href="?sort=name">Name (A-Z)</a></li>
             </ul>
         </div>
@@ -72,10 +72,10 @@
                         <?php endif; ?>
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                            <a href="#" class="dropdown-item add-issue-btn" data-project-id="<?= $project['id'] ?>" data-type="Bug">Add Bug</a>
+                            <a href="#" class="dropdown-item add-task-btn" data-project-id="<?= $project['id'] ?>" data-type="Bug">Add Bug</a>
                         </li>
                         <li>
-                            <a href="#" class="dropdown-item add-issue-btn" data-project-id="<?= $project['id'] ?>" data-type="Feature">Add Feature</a>
+                            <a href="#" class="dropdown-item add-task-btn" data-project-id="<?= $project['id'] ?>" data-type="Feature">Add Feature</a>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
@@ -99,10 +99,10 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-3">
                     <span class="badge bg-light text-dark border">
-                        <i class="bi bi-list-task"></i> Total: <?= $project['total_issues'] ?>
+                        <i class="bi bi-list-task"></i> Total: <?= $project['total_tasks'] ?>
                     </span>
                     <span class="badge bg-primary">
-                        <i class="bi bi-exclamation-circle"></i> Active: <?= $project['active_issues'] ?>
+                        <i class="bi bi-exclamation-circle"></i> Active: <?= $project['active_tasks'] ?>
                     </span>
                 </div>
 
@@ -128,7 +128,7 @@
                     <small class="text-muted">Owner: <?= htmlspecialchars($project['owner_name']) ?></small><br>
                     <small class="text-muted">Created: <?= date('M j, Y', strtotime($project['created_at'])) ?></small>
                 </p>
-                <a href="/projects/<?= $project['id'] ?>" class="btn btn-outline-primary w-100">View Issues</a>
+                <a href="/projects/<?= $project['id'] ?>" class="btn btn-outline-primary w-100">View Tasks</a>
             </div>
         </div>
     </div>
@@ -200,8 +200,8 @@
     </div>
 </div>
 
-<!-- Reuse the Create Issue Modal -->
-<?php require __DIR__ . '/../issues/create_modal.php'; ?>
+<!-- Reuse the Create Task Modal -->
+<?php require __DIR__ . '/../tasks/create_modal.php'; ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -224,19 +224,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Add Issue (Bug/Feature) Modal Logic
-    var createIssueModal = new bootstrap.Modal(document.getElementById('createIssueModal'));
+    // Add Task (Bug/Feature) Modal Logic
+    var createTaskModal = new bootstrap.Modal(document.getElementById('createTaskModal'));
 
-    document.querySelectorAll('.add-issue-btn').forEach(btn => {
+    document.querySelectorAll('.add-task-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.preventDefault();
             var projectId = this.getAttribute('data-project-id');
             var type = this.getAttribute('data-type');
 
-            document.getElementById('createIssueProjectId').value = projectId;
-            document.getElementById('createIssueType').value = type;
+            document.getElementById('createTaskProjectId').value = projectId;
+            document.getElementById('createTaskType').value = type;
 
-            createIssueModal.show();
+            createTaskModal.show();
         });
     });
 
@@ -265,7 +265,6 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .then(data => {
                 if (data.success) {
-                    // Update the UI without page refresh
                     location.reload();
                 } else {
                     throw new Error('Server returned error');

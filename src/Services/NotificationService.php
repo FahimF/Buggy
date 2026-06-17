@@ -1,18 +1,18 @@
 <?php
 
 class NotificationService {
-    public function sendCommentNotification($issueId, $comment, $userId) {
+    public function sendCommentNotification($taskId, $comment, $userId) {
         if (Settings::get('enable_email') != '1') return;
         if (Settings::get('send_email_comment', '1') != '1') return;
 
         $this->dispatch('comment', [
-            'issue_id' => $issueId,
+            'task_id' => $taskId,
             'comment' => $comment,
             'user_id' => $userId
         ]);
     }
 
-    public function sendAssignmentNotification($issueId, $newAssigneeId, $assignerId) {
+    public function sendAssignmentNotification($taskId, $newAssigneeId, $assignerId) {
         if (Settings::get('enable_email') != '1') return;
         if (Settings::get('send_email_assign') != '1') return;
         
@@ -20,7 +20,7 @@ class NotificationService {
         if ($newAssigneeId == $assignerId) return;
 
         $this->dispatch('assign', [
-            'issue_id' => $issueId,
+            'task_id' => $taskId,
             'assignee_id' => $newAssigneeId,
             'assigner_id' => $assignerId
         ]);

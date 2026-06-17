@@ -4,19 +4,19 @@ class CommentController {
     public function create() {
         Auth::requireLogin();
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $issueId = $_POST['issue_id'];
+            $taskId = $_POST['task_id'] ?? $_POST['issue_id'] ?? null;
             $comment = $_POST['comment'];
             $userId = Auth::user()['id'];
 
             $db = Database::connect();
-            $stmt = $db->prepare("INSERT INTO comments (issue_id, user_id, comment) VALUES (?, ?, ?)");
-            $stmt->execute([$issueId, $userId, $comment]);
+            $stmt = $db->prepare("INSERT INTO comments (task_id, user_id, comment) VALUES (?, ?, ?)");
+            $stmt->execute([$taskId, $userId, $comment]);
 
-            header("Location: /issues/$issueId");
+            header("Location: /tasks/$taskId");
 
             // Send Email Notifications
             try {
-                (new NotificationService())->sendCommentNotification($issueId, $comment, $userId);
+                (new NotificationService())->sendCommentNotification($taskId, $comment, $userId);
             } catch (Exception $e) {
                 Logger::log('Notification Error', $e->getMessage());
             }
@@ -68,7 +68,7 @@ class CommentController {
             $newComment = $_POST['comment'];
             $stmt = $db->prepare("UPDATE comments SET comment = ? WHERE id = ?");
             $stmt->execute([$newComment, $id]);
-            header("Location: /issues/" . $comment['issue_id']);
+            header("Location: /tasks/" . $comment['task_id']);
         }
     }
 
@@ -95,7 +95,7 @@ class CommentController {
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $db->prepare("DELETE FROM comments WHERE id = ?");
             $stmt->execute([$id]);
-            header("Location: /issues/" . $comment['issue_id']);
+            header("Location: /tasks/" . $comment['task_id']);
         }
     }
 }

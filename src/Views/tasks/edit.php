@@ -4,36 +4,36 @@
   <ol class="breadcrumb">
     <li class="breadcrumb-item"><a href="/">Projects</a></li>
     <li class="breadcrumb-item"><a href="/projects/<?= $project['id'] ?>"><?= htmlspecialchars($project['name']) ?></a></li>
-    <li class="breadcrumb-item active" aria-current="page">Edit Issue #<?= $issue['id'] ?></li>
+    <li class="breadcrumb-item active" aria-current="page">Edit Task #<?= $task['id'] ?></li>
   </ol>
 </nav>
 
 <div class="card">
     <div class="card-header">
-        <h3>Edit Issue</h3>
+        <h3>Edit Task</h3>
     </div>
     <div class="card-body">
-        <form action="/issues/<?= $issue['id'] ?>/update" method="post" id="editIssueForm">
+        <form action="/tasks/<?= $task['id'] ?>/update" method="post" id="editTaskForm">
             <input type="hidden" name="referrer" value="<?= $_SERVER['HTTP_REFERER'] ?? '' ?>">
             <div class="mb-3">
                 <label class="form-label">Title</label>
-                <input type="text" name="title" class="form-control" value="<?= htmlspecialchars($issue['title']) ?>" required>
+                <input type="text" name="title" class="form-control" value="<?= htmlspecialchars($task['title']) ?>" required>
             </div>
             
             <div class="row">
                 <div class="col-md-3 mb-3">
                     <label class="form-label">Type</label>
                     <select name="type" class="form-select">
-                        <option value="Bug" <?= ($issue['type'] ?? 'Bug') === 'Bug' ? 'selected' : '' ?>>Bug</option>
-                        <option value="Feature" <?= ($issue['type'] ?? 'Bug') === 'Feature' ? 'selected' : '' ?>>Feature</option>
+                        <option value="Bug" <?= ($task['type'] ?? 'Bug') === 'Bug' ? 'selected' : '' ?>>Bug</option>
+                        <option value="Feature" <?= ($task['type'] ?? 'Bug') === 'Feature' ? 'selected' : '' ?>>Feature</option>
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">
                     <label class="form-label">Priority</label>
                     <select name="priority" class="form-select">
-                        <option value="High" <?= ($issue['priority'] ?? 'Medium') === 'High' ? 'selected' : '' ?>>High</option>
-                        <option value="Medium" <?= ($issue['priority'] ?? 'Medium') === 'Medium' ? 'selected' : '' ?>>Medium</option>
-                        <option value="Low" <?= ($issue['priority'] ?? 'Medium') === 'Low' ? 'selected' : '' ?>>Low</option>
+                        <option value="High" <?= ($task['priority'] ?? 'Medium') === 'High' ? 'selected' : '' ?>>High</option>
+                        <option value="Medium" <?= ($task['priority'] ?? 'Medium') === 'Medium' ? 'selected' : '' ?>>Medium</option>
+                        <option value="Low" <?= ($task['priority'] ?? 'Medium') === 'Low' ? 'selected' : '' ?>>Low</option>
                     </select>
                 </div>
                 <div class="col-md-3 mb-3">
@@ -43,7 +43,7 @@
                         $statuses = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', "WND"];
                         foreach ($statuses as $status): 
                         ?>
-                            <option value="<?= $status ?>" <?= $issue['status'] === $status ? 'selected' : '' ?>>
+                            <option value="<?= $status ?>" <?= $task['status'] === $status ? 'selected' : '' ?>>
                                 <?= $status ?>
                             </option>
                         <?php endforeach; ?>
@@ -54,7 +54,7 @@
                     <select name="assigned_to" class="form-select">
                         <option value="">-- Unassigned --</option>
                         <?php foreach ($users as $user): ?>
-                            <option value="<?= $user['id'] ?>" <?= $issue['assigned_to_id'] == $user['id'] ? 'selected' : '' ?>>
+                            <option value="<?= $user['id'] ?>" <?= $task['assigned_to_id'] == $user['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($user['username']) ?>
                             </option>
                         <?php endforeach; ?>
@@ -64,14 +64,14 @@
 
             <div class="mb-3">
                 <label class="form-label">Description</label>
-                <div id="editor-container" style="height: 300px;"><?= $issue['description'] ?></div>
+                <div id="editor-container" style="height: 300px;"><?= $task['description'] ?></div>
                 <input type="hidden" name="description" id="descriptionInput">
             </div>
             
             <hr>
             <div class="mb-4">
                 <h5>Sub-tasks</h5>
-                <div id="issueSubtasksContainer" class="mb-3">
+                <div id="taskSubtasksContainer" class="mb-3">
                     <!-- Loaded dynamically -->
                 </div>
                 <div class="input-group">
@@ -86,7 +86,7 @@
             ?>
             <div class="d-flex justify-content-between">
                 <a href="<?= $backLink ?>" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">Update Issue</button>
+                <button type="submit" class="btn btn-primary">Update Task</button>
             </div>
         </form>
     </div>
@@ -193,7 +193,7 @@
             });
         });
         
-        const form = document.getElementById('editIssueForm');
+        const form = document.getElementById('editTaskForm');
         form.onsubmit = function(e) {
             document.getElementById('descriptionInput').value = quill.root.innerHTML;
             
@@ -201,7 +201,7 @@
             const incompleteCount = localIncompleteSubtasksCount;
             
             if (status === 'Completed' && incompleteCount > 0) {
-                if (confirm('This issue has ' + incompleteCount + ' incomplete sub-task(s). Would you like to mark all sub-tasks as completed and save changes?')) {
+                if (confirm('This task has ' + incompleteCount + ' incomplete sub-task(s). Would you like to mark all sub-tasks as completed and save changes?')) {
                     const input = document.createElement('input');
                     input.type = 'hidden';
                     input.name = 'force_complete_subtasks';
@@ -214,14 +214,14 @@
         };
 
         // Sub-tasks Logic (Edit Mode)
-        const issueId = <?= $issue['id'] ?>;
+        const taskId = <?= $task['id'] ?>;
         let localIncompleteSubtasksCount = 0;
 
         function loadSubtasks() {
-            const container = document.getElementById('issueSubtasksContainer');
+            const container = document.getElementById('taskSubtasksContainer');
             container.innerHTML = '<div class="text-muted small">Loading sub-tasks...</div>';
 
-            fetch('/issues/sub-tasks?issue_id=' + issueId)
+            fetch('/tasks/sub-tasks?issue_id=' + taskId)
                 .then(res => res.json())
                 .then(subtasks => {
                     container.innerHTML = '';
@@ -272,7 +272,7 @@
 
                         chk.addEventListener('change', function() {
                             const newStatus = this.checked ? 1 : 0;
-                            fetch('/issues/sub-tasks/toggle', {
+                            fetch('/tasks/sub-tasks/toggle', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({ id: st.id, is_completed: newStatus })
@@ -285,7 +285,7 @@
 
                         btnDel.addEventListener('click', function() {
                             if (confirm('Delete this sub-task?')) {
-                                fetch('/issues/sub-tasks/delete', {
+                                fetch('/tasks/sub-tasks/delete', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ id: st.id })
@@ -314,10 +314,10 @@
             const desc = input.value.trim();
             if (!desc) return;
 
-            fetch('/issues/sub-tasks/create', {
+            fetch('/tasks/sub-tasks/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ issue_id: issueId, description: desc })
+                body: JSON.stringify({ issue_id: taskId, description: desc })
             })
             .then(res => res.json())
             .then(() => {

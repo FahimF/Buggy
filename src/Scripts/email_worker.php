@@ -41,26 +41,26 @@ try {
 }
 
 function processCommentNotification($db, $host, $data) {
-    $issueId = $data['issue_id'];
+    $taskId = $data['task_id'] ?? $data['issue_id'];
     $comment = $data['comment'];
     $currentUserId = $data['user_id'];
 
-    // Get Issue Details
-    $stmt = $db->prepare("SELECT i.title, i.creator_id, p.name as project_name FROM issues i JOIN projects p ON i.project_id = p.id WHERE i.id = ?");
-    $stmt->execute([$issueId]);
-    $issue = $stmt->fetch();
-    if (!$issue) return;
+    // Get Task Details
+    $stmt = $db->prepare("SELECT i.title, i.creator_id, p.name as project_name FROM tasks i JOIN projects p ON i.project_id = p.id WHERE i.id = ?");
+    $stmt->execute([$taskId]);
+    $task = $stmt->fetch();
+    if (!$task) return;
 
     $recipients = [];
 
     // Add Creator (if not current user)
-    if ($issue['creator_id'] != $currentUserId) {
-        $recipients[$issue['creator_id']] = true;
+    if ($task['creator_id'] != $currentUserId) {
+        $recipients[$task['creator_id']] = true;
     }
 
     // Add Previous Commenters
-    $stmt = $db->prepare("SELECT DISTINCT user_id FROM comments WHERE issue_id = ?");
-    $stmt->execute([$issueId]);
+    $stmt = $db->prepare("SELECT DISTINCT user_id FROM comments WHERE task_id = ?");
+    $stmt->execute([$taskId]);
     while ($row = $stmt->fetch()) {
         if ((int)$row['user_id'] !== (int)$currentUserId) {
             $recipients[$row['user_id']] = true;
@@ -85,32 +85,29 @@ function processCommentNotification($db, $host, $data) {
     // Fetch Emails
     $ids = implode(',', array_keys($recipients));
     $stmt = $db->prepare("SELECT email FROM users WHERE id IN ($ids) AND email IS NOT NULL AND email != ''");
-    // Note: In a real app we'd bind params properly or chunk, but reusing existing logic style
-    // However, for CLI robustnes, let's just do it. SQLite/MySQL usually handle this string injection if IDs are safe (ints).
-    // array_keys of $recipients are integers from DB, so safe.
     $stmt->execute();
     $emails = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     if (empty($emails)) return;
 
-    $subject = "[" . $issue['project_name'] . "] " . "New Comment on Issue: " . $issue['title'];
-    $message = "A new comment was posted on issue: " . $issue['title'] . "\n\nProject: " . $issue['project_name'] . "\n\n" .
+    $subject = "[" . $task['project_name'] . "] " . "New Comment on Task: " . $task['title'];
+    $message = "A new comment was posted on task: " . $task['title'] . "\n\nProject: " . $task['project_name'] . "\n\n" .
                "Comment:\n" . $comment . "\n\n" .
-               "View Issue: http://" . $host . "/issues/$issueId";
+               "View Task: http://" . $host . "/tasks/$taskId";
 
     sendEmails($emails, $subject, $message);
 }
 
 function processAssignmentNotification($db, $host, $data) {
-    $issueId = $data['issue_id'];
+    $taskId = $data['task_id'] ?? $data['issue_id'];
     $assigneeId = $data['assignee_id'];
     $assignerId = $data['assigner_id'];
 
-    // Get Issue
-    $stmt = $db->prepare("SELECT i.title, p.name as project_name FROM issues i JOIN projects p ON i.project_id = p.id WHERE i.id = ?");
-    $stmt->execute([$issueId]);
-    $issue = $stmt->fetch();
-    if (!$issue) return;
+    // Get Task
+    $stmt = $db->prepare("SELECT i.title, p.name as project_name FROM tasks i JOIN projects p ON i.project_id = p.id WHERE i.id = ?");
+    $stmt->execute([$taskId]);
+    $task = $stmt->fetch();
+    if (!$task) return;
 
     // Get Assignee Email
     $stmt = $db->prepare("SELECT email FROM users WHERE id = ?");
@@ -125,9 +122,9 @@ function processAssignmentNotification($db, $host, $data) {
     $assigner = $stmt->fetch();
     $assignerName = $assigner ? $assigner['username'] : 'System';
 
-    $subject = "[" . $issue['project_name'] . "] " . "Assigned to Issue: " . $issue['title'];
-    $message = "You have been assigned to issue: " . $issue['title'] . "\n\nProject: " . $issue['project_name'] . "\n\nAssigner: $assignerName.\n\n" .
-               "View Issue: http://" . $host . "/issues/$issueId";
+    $subject = "[" . $task['project_name'] . "] " . "Assigned to Task: " . $task['title'];
+    $message = "You have been assigned to task: " . $task['title'] . "\n\nProject: " . $task['project_name'] . "\n\nAssigner: $assignerName.\n\n" .
+               "View Task: http://" . $host . "/tasks/$taskId";
 
     sendEmails([$user['email']], $subject, $message);
 }
