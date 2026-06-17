@@ -506,6 +506,27 @@
                     
                     // Attach preview handlers to images inside modal content
                     attachImageListeners();
+                    
+                    // Bind change event to details sub-task checkboxes
+                    contentDiv.querySelectorAll('.detail-subtask-chk').forEach(function(chk) {
+                        chk.addEventListener('change', function() {
+                            var subtaskId = this.dataset.id;
+                            var newStatus = this.checked ? 1 : 0;
+                            var label = this.nextElementSibling;
+                            
+                            if (newStatus === 1) {
+                                label.classList.add('text-decoration-line-through', 'text-muted');
+                            } else {
+                                label.classList.remove('text-decoration-line-through', 'text-muted');
+                            }
+                            
+                            fetch('/tasks/sub-tasks/toggle', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ id: subtaskId, is_completed: newStatus })
+                            });
+                        });
+                    });
                 });
         }
         
