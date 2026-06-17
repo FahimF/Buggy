@@ -98,6 +98,8 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new ProjectController())->pin();
 } elseif ($uri === '/projects/unpin') {
     (new ProjectController())->unpin();
+} elseif ($uri === '/projects/import-tasks') {
+    (new ProjectController())->importTasks();
 } elseif (preg_match('#^/projects/(\d+)$#', $uri, $matches)) {
     (new TaskController())->index($matches[1]);
 } elseif (preg_match('#^/projects/(\d+)/kanban$#', $uri, $matches)) {

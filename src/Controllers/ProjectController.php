@@ -328,4 +328,100 @@ class ProjectController {
             }
         }
     }
+
+    public function importTasks() {
+        Auth::requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $projectId = $_POST['project_id'];
+            if (!$projectId || !isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
+                header('Location: /projects');
+                exit;
+            }
+
+            $db = Database::connect();
+            $creatorId = Auth::user()['id'];
+
+            // Fetch all users to map assignee names
+            $userRows = $db->query("SELECT id, username FROM users")->fetchAll();
+            $usersMap = [];
+            foreach ($userRows as $u) {
+                $usersMap[strtolower($u['username'])] = $u['id'];
+            }
+
+            $filePath = $_FILES['csv_file']['tmp_name'];
+            if (($handle = fopen($filePath, "r")) !== FALSE) {
+                // Read header row
+                $headers = fgetcsv($handle, 0, ",");
+                if ($headers !== FALSE) {
+                    // Normalize headers
+                    $headers = array_map(function($h) {
+                        return trim(strtolower(str_replace('"', '', $h)));
+                    }, $headers);
+
+                    $titleIndex = array_search('title', $headers);
+                    $descIndex = array_search('description', $headers);
+                    $assigneeIndex = array_search('action required', $headers);
+                    $priorityIndex = array_search('priority', $headers);
+                    $statusIndex = array_search('status', $headers);
+
+                    if ($titleIndex !== FALSE) {
+                        $stmt = $db->prepare("
+                            INSERT INTO tasks (project_id, title, description, type, creator_id, assigned_to_id, status, priority)
+                            VALUES (?, ?, ?, 'Feature', ?, ?, ?, ?)
+                        ");
+
+                        while (($row = fgetcsv($handle, 0, ",")) !== FALSE) {
+                            $title = $row[$titleIndex] ?? '';
+                            if (empty(trim($title))) {
+                                continue;
+                            }
+                            $description = $descIndex !== FALSE ? ($row[$descIndex] ?? '') : '';
+                            
+                            // Map Assignee
+                            $assignedToId = null;
+                            if ($assigneeIndex !== FALSE && !empty($row[$assigneeIndex])) {
+                                $assigneeName = trim(strtolower($row[$assigneeIndex]));
+                                if (isset($usersMap[$assigneeName])) {
+                                    $assignedToId = $usersMap[$assigneeName];
+                                }
+                            }
+
+                            // Map Priority
+                            $csvPriority = $priorityIndex !== FALSE ? trim($row[$priorityIndex] ?? '') : '';
+                            $priority = 'Medium';
+                            if (strcasecmp($csvPriority, 'High') === 0) {
+                                $priority = 'High';
+                            } elseif (strcasecmp($csvPriority, 'Low') === 0) {
+                                $priority = 'Low';
+                            }
+
+                            // Map Status
+                            $csvStatus = $statusIndex !== FALSE ? trim($row[$statusIndex] ?? '') : '';
+                            $status = 'Unassigned';
+                            if (strcasecmp($csvStatus, 'Closed') === 0) {
+                                $status = 'Completed';
+                            } elseif (strcasecmp($csvStatus, 'In progress') === 0) {
+                                $status = 'In Progress';
+                            }
+
+                            $stmt->execute([
+                                $projectId,
+                                $title,
+                                $description,
+                                $creatorId,
+                                $assignedToId,
+                                $status,
+                                $priority
+                            ]);
+                        }
+                        Logger::log('Tasks Imported', "Imported tasks to Project ID: $projectId");
+                    }
+                }
+                fclose($handle);
+            }
+
+            header('Location: /projects/' . $projectId);
+            exit;
+        }
+    }
 }

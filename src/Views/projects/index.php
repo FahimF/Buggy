@@ -77,6 +77,9 @@
                         <li>
                             <a href="#" class="dropdown-item add-task-btn" data-project-id="<?= $project['id'] ?>" data-type="Feature">Add Feature</a>
                         </li>
+                        <li>
+                            <a href="#" class="dropdown-item import-tasks-btn" data-project-id="<?= $project['id'] ?>">Import Tasks (CSV)</a>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <button class="dropdown-item edit-project-btn"
@@ -200,6 +203,32 @@
     </div>
 </div>
 
+<!-- Import Tasks Modal -->
+<div class="modal fade" id="importTasksModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/projects/import-tasks" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="project_id" id="importTasksProjectId">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import Tasks from GoodDay CSV</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">GoodDay Tasks CSV File</label>
+                        <input type="file" name="csv_file" class="form-control" accept=".csv" required>
+                        <div class="form-text">Select the exported CSV file containing the tasks.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Import Tasks</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Reuse the Create Task Modal -->
 <?php require __DIR__ . '/../tasks/create_modal.php'; ?>
 
@@ -221,6 +250,17 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('editProjectTextColor').value = textColor;
             
             editModal.show();
+        });
+    });
+
+    // Import Tasks Modal Logic
+    var importTasksModal = new bootstrap.Modal(document.getElementById('importTasksModal'));
+    document.querySelectorAll('.import-tasks-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var projectId = this.getAttribute('data-project-id');
+            document.getElementById('importTasksProjectId').value = projectId;
+            importTasksModal.show();
         });
     });
 
