@@ -19,38 +19,28 @@ class Database {
     }
 
     private static function initialize() {
-        // Migration to rename old tables/columns to new unified schema (Tasks to Jobs, Issues to Tasks)
+        // Run migrations for renames
         try {
             $checkIssues = self::$pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='issues'")->fetch();
             if ($checkIssues) {
-                self::$pdo->exec("ALTER TABLE task_lists RENAME TO job_lists");
-                self::$pdo->exec("ALTER TABLE tasks RENAME TO jobs");
-                try {
-                    self::$pdo->exec("ALTER TABLE user_inbox RENAME COLUMN task_id TO job_id");
-                } catch (PDOException $e) {
-                    // Ignore column rename if already done or failed
-                }
-                self::$pdo->exec("ALTER TABLE issues RENAME TO tasks");
-                self::$pdo->exec("ALTER TABLE issue_sub_tasks RENAME TO sub_tasks");
-                try {
-                    self::$pdo->exec("ALTER TABLE sub_tasks RENAME COLUMN issue_id TO task_id");
-                } catch (PDOException $e) {
-                    // Ignore column rename if already done or failed
-                }
-                try {
-                    self::$pdo->exec("ALTER TABLE comments RENAME COLUMN issue_id TO task_id");
-                } catch (PDOException $e) {
-                    // Ignore column rename if already done or failed
-                }
-                try {
-                    self::$pdo->exec("UPDATE attachments SET parent_type = 'task' WHERE parent_type = 'issue'");
-                } catch (PDOException $e) {
-                    // Ignore update if failed
-                }
+                try { self::$pdo->exec("ALTER TABLE task_lists RENAME TO job_lists"); } catch (PDOException $e) {}
+                try { self::$pdo->exec("ALTER TABLE tasks RENAME TO jobs"); } catch (PDOException $e) {}
+                try { self::$pdo->exec("ALTER TABLE user_inbox RENAME COLUMN task_id TO job_id"); } catch (PDOException $e) {}
+                try { self::$pdo->exec("ALTER TABLE issues RENAME TO tasks"); } catch (PDOException $e) {}
+                try { self::$pdo->exec("ALTER TABLE issue_sub_tasks RENAME TO sub_tasks"); } catch (PDOException $e) {}
             }
-        } catch (PDOException $e) {
-            // Ignore if already migrated or errored
-        }
+        } catch (PDOException $e) {}
+
+        // Separate column renames to run unconditionally in case a partial migration occurred
+        try {
+            self::$pdo->exec("ALTER TABLE sub_tasks RENAME COLUMN issue_id TO task_id");
+        } catch (PDOException $e) {}
+        try {
+            self::$pdo->exec("ALTER TABLE comments RENAME COLUMN issue_id TO task_id");
+        } catch (PDOException $e) {}
+        try {
+            self::$pdo->exec("UPDATE attachments SET parent_type = 'task' WHERE parent_type = 'issue'");
+        } catch (PDOException $e) {}
 
         $queries = [
             "CREATE TABLE IF NOT EXISTS users (
