@@ -124,6 +124,8 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new TaskController())->reorder();
 } elseif (preg_match('#^/tasks/(\d+)$#', $uri, $matches)) {
     (new TaskController())->show($matches[1]);
+} elseif ($uri === '/tasks/details') {
+    (new TaskController())->details();
 } elseif (preg_match('#^/tasks/(\d+)/edit$#', $uri, $matches)) {
     (new TaskController())->edit($matches[1]);
 } elseif (preg_match('#^/tasks/(\d+)/update$#', $uri, $matches)) {

@@ -233,6 +233,59 @@ class TaskController {
         require __DIR__ . '/../Views/tasks/show.php';
     }
 
+    public function details() {
+        Auth::requireLogin();
+        $id = $_GET['id'] ?? null;
+        if (!$id) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Missing task ID']);
+            exit;
+        }
+
+        $db = Database::connect();
+        $stmt = $db->prepare("
+            SELECT i.*, u.username as assigned_to_name, c.username as creator_name, p.name as project_name
+            FROM tasks i 
+            LEFT JOIN users u ON i.assigned_to_id = u.id 
+            JOIN users c ON i.creator_id = c.id
+            JOIN projects p ON i.project_id = p.id
+            WHERE i.id = ?
+        ");
+        $stmt->execute([$id]);
+        $task = $stmt->fetch();
+        if (!$task) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Task not found']);
+            exit;
+        }
+
+        // Get Comments
+        $stmt = $db->prepare("
+            SELECT c.*, u.username 
+            FROM comments c 
+            JOIN users u ON c.user_id = u.id 
+            WHERE c.task_id = ? 
+            ORDER BY c.created_at ASC
+        ");
+        $stmt->execute([$id]);
+        $comments = $stmt->fetchAll();
+
+        // Get Sub-tasks
+        $stmt = $db->prepare("SELECT * FROM sub_tasks WHERE task_id = ? ORDER BY created_at ASC");
+        $stmt->execute([$id]);
+        $subtasks = $stmt->fetchAll();
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'task' => $task,
+            'comments' => $comments,
+            'subtasks' => $subtasks,
+            'current_user_id' => Auth::user()['id'],
+            'is_admin' => Auth::user()['is_admin']
+        ]);
+        exit;
+    }
+
     public function edit($id) {
         Auth::requireLogin();
         $db = Database::connect();
