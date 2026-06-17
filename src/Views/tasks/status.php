@@ -30,6 +30,10 @@
     text-decoration: line-through;
     opacity: 0.6;
 }
+.completed-task-card {
+    opacity: 0.7;
+    background-color: #f8f9fa;
+}
 .status-list {
     min-height: 100px;
     background-color: #f8f9fa;
@@ -128,10 +132,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 var card = this.closest('.status-card');
                 var titleLink = card.querySelector('.task-title-link');
                 
+                
                 // Add strikethrough styling immediately
                 titleLink.classList.add('completed-task');
-                this.disabled = true; // Disable to prevent double requests
+                card.classList.add('completed-task-card'); // CSS overlay or opacity hint
+                this.disabled = true;
                 
+                function completeTaskSuccess() {
+                    // Update header counts
+                    updateCounts();
+                    // Fade out and remove task card after 3 seconds
+                    setTimeout(function() {
+                        card.style.transition = 'all 0.5s ease';
+                        card.style.opacity = '0';
+                        card.style.transform = 'translateY(10px)';
+                        setTimeout(function() {
+                            card.remove();
+                            updateCounts();
+                        }, 500);
+                    }, 3000);
+                }
+
+                function revertCompleteTask(chkEl) {
+                    titleLink.classList.remove('completed-task');
+                    card.classList.remove('completed-task-card');
+                    chkEl.disabled = false;
+                    chkEl.checked = false;
+                }
+
                 // Update status via AJAX
                 fetch('/tasks/update_status', {
                     method: 'POST',
@@ -150,35 +178,22 @@ document.addEventListener('DOMContentLoaded', function() {
                             .then(res => res.json())
                             .then(retryData => {
                                 if (!retryData.success) {
-                                    // Revert on error
-                                    titleLink.classList.remove('completed-task');
-                                    this.disabled = false;
-                                    this.checked = false;
+                                    revertCompleteTask(this);
                                 } else {
-                                    // Update header counts
-                                    updateCounts();
+                                    completeTaskSuccess();
                                 }
                             });
                         } else {
-                            // Revert checkbox state
-                            titleLink.classList.remove('completed-task');
-                            this.disabled = false;
-                            this.checked = false;
+                            revertCompleteTask(this);
                         }
                     } else if (!data.success) {
-                        // Revert on error
-                        titleLink.classList.remove('completed-task');
-                        this.disabled = false;
-                        this.checked = false;
+                        revertCompleteTask(this);
                     } else {
-                        // Success - update header counts
-                        updateCounts();
+                        completeTaskSuccess();
                     }
                 })
                 .catch(err => {
-                    titleLink.classList.remove('completed-task');
-                    this.disabled = false;
-                    this.checked = false;
+                    revertCompleteTask(this);
                 });
             }
         });

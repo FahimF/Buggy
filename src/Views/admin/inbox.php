@@ -45,8 +45,8 @@
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($item['task_id']): ?>
-                                        <a href="/tasks/list/<?= $item['task_list_id'] ?? '#' ?>"><?= htmlspecialchars($item['task_title'] ?? 'Unknown Task') ?></a>
+                                    <?php if ($item['job_id']): ?>
+                                        <a href="/jobs/list/<?= $item['task_list_id'] ?? '#' ?>"><?= htmlspecialchars($item['task_title'] ?? 'Unknown Job') ?></a>
                                     <?php else: ?>
                                         <span class="text-muted">No task</span>
                                     <?php endif; ?>

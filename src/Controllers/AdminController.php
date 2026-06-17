@@ -230,12 +230,12 @@ class AdminController {
 
         $db = Database::connect();
 
-        // Get inbox items with user and task information
+        // Get inbox items with user and job information
         $sql = "
-            SELECT ui.*, u.username, t.title as task_title, t.list_id as task_list_id
+            SELECT ui.*, u.username, j.title as task_title, j.list_id as task_list_id
             FROM user_inbox ui
             LEFT JOIN users u ON ui.user_id = u.id
-            LEFT JOIN tasks t ON ui.task_id = t.id
+            LEFT JOIN jobs j ON ui.job_id = j.id
             ORDER BY ui.created_at DESC
             LIMIT ? OFFSET ?
         ";
