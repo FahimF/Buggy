@@ -91,11 +91,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 var newStatus = evt.to.getAttribute('data-status');
                 var taskId = itemEl.getAttribute('data-id');
                 
+                var order = Array.from(evt.to.children).map(card => card.getAttribute('data-id'));
                 // Update status via AJAX
                 fetch('/tasks/update_status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ issue_id: taskId, status: newStatus })
+                    body: JSON.stringify({ issue_id: taskId, status: newStatus, order: order })
                 })
                 .then(res => res.json())
                 .then(data => {
@@ -104,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             fetch('/tasks/update_status', {
                                  method: 'POST',
                                  headers: { 'Content-Type': 'application/json' },
-                                 body: JSON.stringify({ issue_id: taskId, status: newStatus, force_complete_subtasks: true })
+                                 body: JSON.stringify({ issue_id: taskId, status: newStatus, force_complete_subtasks: true, order: order })
                             })
                             .then(res => res.json())
                             .then(retryData => {

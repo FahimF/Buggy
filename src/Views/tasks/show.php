@@ -28,16 +28,19 @@
                 <div class="mb-3 text-muted small">
                     Created by <strong><?= htmlspecialchars($task['creator_name']) ?></strong> on <?= date('M j, Y H:i', strtotime($task['created_at'])) ?>
                 </div>
-                <hr>
-                <div class="card-text">
-                    <?= $task['description'] ?> <!-- Assumed safe HTML from Quill, but normally needs sanitization -->
-                </div>
+                <div class="card-text ql-editor" style="padding: 0;"><?php
+                    $cleanDesc = preg_replace('/^(?:<p>\s*<br\s*\/?>\s*<\/p>|<p>\s*<\/p>|\s)+/i', '', $task['description'] ?? '');
+                    $cleanDesc = preg_replace('/(?:<p>\s*<br\s*\/?>\s*<\/p>|<p>\s*<\/p>|\s)+$/i', '', $cleanDesc);
+                    echo $cleanDesc;
+                ?></div>
                 
-                <hr>
-                <div class="mt-4">
-                    <h5>Sub-tasks</h5>
-                    <div id="taskSubtasksContainer" class="mb-3">
-                        <!-- Loaded dynamically -->
+                <div id="subtasksSection" style="display: none;">
+                    <hr>
+                    <div class="mt-4">
+                        <h5>Sub-tasks</h5>
+                        <div id="taskSubtasksContainer" class="mb-3">
+                            <!-- Loaded dynamically -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -66,9 +69,7 @@
                         <?php endif; ?>
                     </div>
                 </div>
-                <div class="mt-2 ql-editor" style="padding: 0;">
-                    <?= $comment['comment'] ?>
-                </div>
+                <div class="mt-2 ql-editor" style="padding: 0;"><?= $comment['comment'] ?></div>
             </div>
         </div>
         <?php endforeach; ?>
@@ -156,18 +157,19 @@
 
     function loadSubtasks() {
         const container = document.getElementById('taskSubtasksContainer');
-        container.innerHTML = '<div class="text-muted small">Loading sub-tasks...</div>';
-
+        const section = document.getElementById('subtasksSection');
+        
         fetch('/tasks/sub-tasks?issue_id=' + taskId)
             .then(res => res.json())
             .then(subtasks => {
                 container.innerHTML = '';
 
                 if (subtasks.length === 0) {
-                    container.innerHTML = '<div class="text-muted small py-1">No sub-tasks.</div>';
+                    section.style.display = 'none';
                     return;
                 }
 
+                section.style.display = 'block';
                 subtasks.forEach(st => {
                     const div = document.createElement('div');
                     div.className = 'd-flex align-items-center border-bottom py-2';

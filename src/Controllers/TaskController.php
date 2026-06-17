@@ -446,6 +446,13 @@ class TaskController {
             $stmt = $db->prepare("UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP $assignedToUpdate WHERE id = ?");
             $stmt->execute($params);
 
+            if (isset($input['order']) && is_array($input['order'])) {
+                $reorderStmt = $db->prepare("UPDATE tasks SET sort_order = ? WHERE id = ?");
+                foreach ($input['order'] as $index => $id) {
+                    $reorderStmt->execute([$index, $id]);
+                }
+            }
+
             if ($newAssignee) {
                 try {
                     (new NotificationService())->sendAssignmentNotification($taskId, $newAssignee, Auth::user()['id']);

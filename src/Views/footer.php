@@ -361,18 +361,15 @@
                                             ${commentActions}
                                         </div>
                                     </div>
-                                    <div class="mt-2 ql-editor" style="padding: 0;">
-                                        ${c.comment}
-                                    </div>
+                                    <div class="mt-2 ql-editor" style="padding: 0;">${c.comment}</div>
                                 </div>
                             </div>
                         `;
                     });
                     
-                    var subtasksHtml = '';
-                    if (subtasks.length === 0) {
-                        subtasksHtml = '<div class="text-muted small py-1">No sub-tasks.</div>';
-                    } else {
+                    var subtasksSection = '';
+                    if (subtasks && subtasks.length > 0) {
+                        var subtasksHtml = '';
                         subtasks.forEach(st => {
                             var isComp = parseInt(st.is_completed) === 1;
                             var checked = isComp ? 'checked' : '';
@@ -386,6 +383,15 @@
                                 </div>
                             `;
                         });
+                        subtasksSection = `
+                            <hr>
+                            <div class="mt-4">
+                                <h5>Sub-tasks</h5>
+                                <div id="modalSubtasksContainer" class="mb-3">
+                                    ${subtasksHtml}
+                                </div>
+                            </div>
+                        `;
                     }
                     
                     var html = `
@@ -409,17 +415,8 @@
                                         <div class="mb-3 text-muted small">
                                             Created by <strong>${escapeHtml(task.creator_name)}</strong> on ${task.created_at}
                                         </div>
-                                        <hr>
-                                        <div class="card-text ql-editor" style="padding: 0;">
-                                            ${task.description || ''}
-                                        </div>
-                                        <hr>
-                                        <div class="mt-4">
-                                            <h5>Sub-tasks</h5>
-                                            <div id="modalSubtasksContainer" class="mb-3">
-                                                ${subtasksHtml}
-                                            </div>
-                                        </div>
+                                        <div class="card-text ql-editor" style="padding: 0;">${(task.description || '').replace(/^(?:<p>\s*<br\s*\/?>\s*<\/p>|<p>\s*<\/p>|\s)+/gi, '').replace(/(?:<p>\s*<br\s*\/?>\s*<\/p>|<p>\s*<\/p>|\s)+$/gi, '')}</div>
+                                        ${subtasksSection}
                                     </div>
                                 </div>
                                 

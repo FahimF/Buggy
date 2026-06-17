@@ -32,6 +32,17 @@
         .ql-editor {
             font-size: <?= Settings::get('quill_base_font_size') ?: '16px' ?> !important;
         }
+        /* Style adjustments for read-only Quill editors to remove extra spacing */
+        .ql-editor:not(.ql-container .ql-editor) {
+            padding: 0 !important;
+            height: auto !important;
+        }
+        .ql-editor:not(.ql-container .ql-editor) p:first-child {
+            margin-top: 0 !important;
+        }
+        .ql-editor:not(.ql-container .ql-editor) p:last-child {
+            margin-bottom: 0 !important;
+        }
         .ql-editor h1 { font-size: 2em; }
         .ql-editor h2 { font-size: 1.5em; }
         .ql-editor h3 { font-size: 1.17em; }

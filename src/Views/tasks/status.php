@@ -77,7 +77,7 @@
                     <div class="status-list d-flex flex-column gap-2" id="in-progress-list" data-status="In Progress">
                         <?php foreach ($statusData['In Progress'] as $task): ?>
                             <div class="card status-card shadow-sm" data-id="<?= $task['id'] ?>">
-                                <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                                <div class="card-body py-0 px-3 d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-3 flex-grow-1">
                                         <div class="form-check m-0">
                                             <input class="form-check-input task-complete-checkbox" type="checkbox" style="transform: scale(1.2);" data-id="<?= $task['id'] ?>">
@@ -116,7 +116,7 @@
                     <div class="status-list d-flex flex-column gap-2" id="ready-for-qa-list" data-status="Ready for QA">
                         <?php foreach ($statusData['Ready for QA'] as $task): ?>
                             <div class="card status-card shadow-sm" data-id="<?= $task['id'] ?>">
-                                <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                                <div class="card-body py-0 px-3 d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-3 flex-grow-1">
                                         <div class="flex-grow-1">
                                             <h6 class="m-0">
@@ -152,7 +152,7 @@
                     <div class="status-list d-flex flex-column gap-2" id="unassigned-list" data-status="Unassigned">
                         <?php foreach ($statusData['Unassigned'] as $task): ?>
                             <div class="card status-card shadow-sm" data-id="<?= $task['id'] ?>">
-                                <div class="card-body py-2 px-3 d-flex align-items-center justify-content-between">
+                                <div class="card-body py-0 px-3 d-flex align-items-center justify-content-between">
                                     <div class="d-flex align-items-center gap-3 flex-grow-1">
                                         <div class="flex-grow-1">
                                             <h6 class="m-0">
@@ -390,10 +390,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // If dragged between different sections, status changes.
                 // Call status update API
+                var order = Array.from(evt.to.children).map(card => card.getAttribute('data-id'));
                 fetch('/tasks/update_status', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ issue_id: taskId, status: newStatus })
+                    body: JSON.stringify({ issue_id: taskId, status: newStatus, order: order })
                 })
                 .then(res => res.json())
                 .then(data => {
