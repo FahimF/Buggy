@@ -15,6 +15,13 @@
                 <div class="d-flex justify-content-between align-items-start">
                     <h2 class="card-title"><?= htmlspecialchars($task['title']) ?></h2>
                     <div class="btn-group">
+                        <?php if (($task['is_archived'] ?? 0) == 0 && in_array($task['status'], ['Completed', 'WND'])): ?>
+                            <form action="/tasks/<?= $task['id'] ?>/archive" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this task?');">
+                                <button type="submit" class="btn btn-outline-secondary">
+                                    <i class="bi bi-archive"></i> Archive
+                                </button>
+                            </form>
+                        <?php endif; ?>
                         <a href="/tasks/<?= $task['id'] ?>/edit" class="btn btn-outline-primary">
                             <i class="bi bi-pencil"></i> Edit
                         </a>

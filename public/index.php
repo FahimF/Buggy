@@ -54,6 +54,26 @@ if (!in_array($systemTimezone, DateTimeZone::listIdentifiers())) {
 }
 date_default_timezone_set($systemTimezone);
 
+// Run automatic archiving on page access (WordPress-style cron)
+try {
+    $archiveDays = Settings::get('archive_after_days', '30');
+    if (is_numeric($archiveDays) && $archiveDays >= 0) {
+        $db = Database::connect();
+        $stmt = $db->prepare("UPDATE tasks 
+                              SET is_archived = 1, updated_at = CURRENT_TIMESTAMP 
+                              WHERE is_archived = 0 
+                              AND status IN ('Completed', 'WND') 
+                              AND updated_at <= datetime('now', '-' . (int)$archiveDays . ' days')");
+        $stmt->execute();
+        $count = $stmt->rowCount();
+        if ($count > 0) {
+            Logger::log('Automatic Tasks Archiving', "Archived $count completed tasks older than $archiveDays days");
+        }
+    }
+} catch (Exception $e) {
+    // Fail silently in case database/migration hasn't run yet or table is missing
+}
+
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -122,6 +142,10 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new TaskController())->nestTask();
 } elseif ($uri === '/tasks/reorder') {
     (new TaskController())->reorder();
+} elseif (preg_match('#^/tasks/(\d+)/archive$#', $uri, $matches)) {
+    (new TaskController())->archive($matches[1]);
+} elseif (preg_match('#^/projects/(\d+)/archive-status$#', $uri, $matches)) {
+    (new TaskController())->archiveStatus($matches[1]);
 } elseif (preg_match('#^/tasks/(\d+)$#', $uri, $matches)) {
     (new TaskController())->show($matches[1]);
 } elseif ($uri === '/tasks/details') {
@@ -164,6 +188,16 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new AdminController())->deleteSelectedInboxItems();
 } elseif ($uri === '/admin/inbox/clear-completed') {
     (new AdminController())->clearCompletedInboxItems();
+} elseif ($uri === '/admin/archive') {
+    (new AdminController())->archiveIndex();
+} elseif (preg_match('#^/admin/archive/project/(\d+)$#', $uri, $matches)) {
+    (new AdminController())->archiveProject($matches[1]);
+} elseif ($uri === '/admin/archive/delete-all') {
+    (new AdminController())->archiveDeleteAll();
+} elseif (preg_match('#^/admin/archive/tasks/(\d+)/unarchive$#', $uri, $matches)) {
+    (new AdminController())->archiveUnarchiveTask($matches[1]);
+} elseif (preg_match('#^/admin/archive/tasks/(\d+)/delete$#', $uri, $matches)) {
+    (new AdminController())->archiveDeleteTask($matches[1]);
 } elseif ($uri === '/jobs') {
     (new JobController())->index();
 } elseif ($uri === '/jobs/create-list') {

@@ -23,6 +23,11 @@
             <option value="1" <?= ($settings['allow_registration'] ?? '0') == '1' ? 'selected' : '' ?>>Yes</option>
         </select>
     </div>
+    <div class="mb-3">
+        <label>Move Completed to Archive after (Days)</label>
+        <input type="number" name="settings[archive_after_days]" min="0" class="form-control" value="<?= htmlspecialchars($settings['archive_after_days'] ?? '30') ?>">
+        <div class="form-text">Specify the number of days after which completed/WND tasks are automatically archived. Enter 0 for immediate archiving.</div>
+    </div>
 
     <hr>
     <h4>Email Settings</h4>

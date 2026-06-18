@@ -330,4 +330,99 @@ class AdminController {
         $html .= '</ul></nav>';
         return $html;
     }
+
+    public function archiveIndex() {
+        $db = Database::connect();
+        
+        // Total archived tasks count
+        $totalArchived = $db->query("SELECT COUNT(*) FROM tasks WHERE is_archived = 1")->fetchColumn();
+        
+        // Archived tasks count grouped by project
+        $projects = $db->query("
+            SELECT p.id, p.name, COUNT(t.id) as count 
+            FROM projects p 
+            JOIN tasks t ON t.project_id = p.id 
+            WHERE t.is_archived = 1 
+            GROUP BY p.id, p.name
+            ORDER BY p.name ASC
+        ")->fetchAll();
+
+        $view = 'archive';
+        require __DIR__ . '/../Views/admin/layout.php';
+    }
+
+    public function archiveProject($projectId) {
+        $db = Database::connect();
+        
+        // Get project details
+        $stmt = $db->prepare("SELECT * FROM projects WHERE id = ?");
+        $stmt->execute([$projectId]);
+        $project = $stmt->fetch();
+        if (!$project) die("Project not found");
+
+        // Get all archived tasks for this project
+        $stmt = $db->prepare("
+            SELECT t.*, u.username as assigned_to_name, c.username as creator_name
+            FROM tasks t
+            LEFT JOIN users u ON t.assigned_to_id = u.id
+            JOIN users c ON t.creator_id = c.id
+            WHERE t.project_id = ? AND t.is_archived = 1
+            ORDER BY t.updated_at DESC
+        ");
+        $stmt->execute([$projectId]);
+        $tasks = $stmt->fetchAll();
+
+        $view = 'archive_project';
+        require __DIR__ . '/../Views/admin/layout.php';
+    }
+
+    public function archiveDeleteAll() {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $db = Database::connect();
+            $db->exec("DELETE FROM tasks WHERE is_archived = 1");
+            Logger::log('All Archived Tasks Deleted', "Admin permanently deleted all archived tasks");
+            header('Location: /admin/archive');
+            exit;
+        }
+    }
+
+    public function archiveUnarchiveTask($taskId) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $db = Database::connect();
+            
+            // Get task details for logging
+            $stmt = $db->prepare("SELECT title, project_id FROM tasks WHERE id = ?");
+            $stmt->execute([$taskId]);
+            $task = $stmt->fetch();
+            
+            if ($task) {
+                $stmt = $db->prepare("UPDATE tasks SET is_archived = 0, status = 'Completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                $stmt->execute([$taskId]);
+                Logger::log('Task Unarchived', "Task: {$task['title']} unarchived by Admin");
+                header('Location: /admin/archive/project/' . $task['project_id']);
+                exit;
+            }
+            die("Task not found");
+        }
+    }
+
+    public function archiveDeleteTask($taskId) {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $db = Database::connect();
+            
+            // Get task details for logging
+            $stmt = $db->prepare("SELECT title, project_id FROM tasks WHERE id = ?");
+            $stmt->execute([$taskId]);
+            $task = $stmt->fetch();
+            
+            if ($task) {
+                $stmt = $db->prepare("DELETE FROM tasks WHERE id = ?");
+                $stmt->execute([$taskId]);
+                Logger::log('Archived Task Deleted', "Archived Task: {$task['title']} permanently deleted by Admin");
+                header('Location: /admin/archive/project/' . $task['project_id']);
+                exit;
+            }
+            die("Task not found");
+        }
+    }
 }

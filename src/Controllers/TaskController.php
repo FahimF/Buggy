@@ -20,7 +20,7 @@ class TaskController {
         if (!in_array($col, $allowedSorts)) $col = 'created_at';
         if (!in_array(strtoupper($dir), ['ASC', 'DESC'])) $dir = 'DESC';
 
-        $whereClause = "WHERE i.project_id = ?";
+        $whereClause = "WHERE i.project_id = ? AND i.is_archived = 0";
         $params = [$projectId];
 
         if ($hideCompleted) {
@@ -220,7 +220,7 @@ class TaskController {
         $stmt->execute([$id]);
         $task = $stmt->fetch();
         
-        if (!$task) die("Task not found");
+        if (!$task || ($task['is_archived'] == 1 && !Auth::user()['is_admin'])) die("Task not found");
 
         // Get Comments
         $stmt = $db->prepare("
@@ -666,6 +666,39 @@ class TaskController {
             $db->rollBack();
             http_response_code(500);
             echo json_encode(['error' => 'Failed to nest task: ' . $e->getMessage()]);
+            exit;
+        }
+    }
+
+    public function archive($id) {
+        Auth::requireLogin();
+        $db = Database::connect();
+        $stmt = $db->prepare("SELECT project_id, title FROM tasks WHERE id = ?");
+        $stmt->execute([$id]);
+        $task = $stmt->fetch();
+        if ($task) {
+            $stmt = $db->prepare("UPDATE tasks SET is_archived = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+            $stmt->execute([$id]);
+            Logger::log('Task Archived', "Task: {$task['title']}");
+            
+            $redirect = $_POST['redirect_to'] ?? "/projects/{$task['project_id']}";
+            header("Location: " . $redirect);
+            exit;
+        }
+        die("Task not found");
+    }
+
+    public function archiveStatus($projectId) {
+        Auth::requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $status = $_POST['status'] ?? '';
+            if (in_array($status, ['Completed', 'WND'])) {
+                $db = Database::connect();
+                $stmt = $db->prepare("UPDATE tasks SET is_archived = 1, updated_at = CURRENT_TIMESTAMP WHERE project_id = ? AND status = ? AND is_archived = 0");
+                $stmt->execute([$projectId, $status]);
+                Logger::log('Tasks Column Archived', "Archived all '$status' tasks in Project ID: $projectId");
+            }
+            header("Location: /projects/$projectId/kanban");
             exit;
         }
     }

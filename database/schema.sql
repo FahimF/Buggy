@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     sort_order INTEGER DEFAULT 0,
     priority TEXT DEFAULT 'Medium',
+    is_archived INTEGER DEFAULT 0,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (creator_id) REFERENCES users(id),
     FOREIGN KEY (assigned_to_id) REFERENCES users(id)

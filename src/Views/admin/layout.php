@@ -12,6 +12,9 @@
             <a href="/admin/logs" class="list-group-item list-group-item-action <?= $view === 'logs' ? 'active' : '' ?>">
                 <i class="bi bi-journal-text"></i> System Logs
             </a>
+            <a href="/admin/archive" class="list-group-item list-group-item-action <?= $view === 'archive' || $view === 'archive_project' ? 'active' : '' ?>">
+                <i class="bi bi-archive"></i> Archived Tasks
+            </a>
             <a href="/admin/settings" class="list-group-item list-group-item-action <?= $view === 'settings' ? 'active' : '' ?>">
                 <i class="bi bi-gear"></i> Settings
             </a>

@@ -34,6 +34,14 @@
             <div class="card-header bg-white border-bottom-0 fw-bold sticky-top">
                 <?= htmlspecialchars($columnName) ?>
                 <span class="badge <?= getStatusBadgeClass($columnName) ?> rounded-pill float-end"><?= count($columnTasks) ?></span>
+                <?php if (in_array($columnName, ['Completed', 'WND']) && count($columnTasks) > 0): ?>
+                    <form action="/projects/<?= $project['id'] ?>/archive-status" method="POST" class="d-inline float-end me-2" onsubmit="return confirm('Are you sure you want to archive all tasks in the <?= htmlspecialchars($columnName) ?> column?');">
+                        <input type="hidden" name="status" value="<?= htmlspecialchars($columnName) ?>">
+                        <button type="submit" class="btn btn-xs btn-outline-secondary py-0 px-1" style="font-size: 0.75rem;">
+                            <i class="bi bi-archive"></i> Archive All
+                        </button>
+                    </form>
+                <?php endif; ?>
             </div>
             <div class="card-body p-2 kanban-column" data-status="<?= htmlspecialchars($columnName) ?>" id="col-<?= md5($columnName) ?>">
                 <?php foreach ($columnTasks as $task): ?>
@@ -66,6 +74,16 @@
                                 </span>
                             <?php endif; ?>
                         </div>
+                        <?php if (in_array($task['status'], ['Completed', 'WND'])): ?>
+                            <div class="text-end mt-2 pt-2 border-top">
+                                <form action="/tasks/<?= $task['id'] ?>/archive" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this task?');">
+                                    <input type="hidden" name="redirect_to" value="/projects/<?= $project['id'] ?>/kanban">
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;">
+                                        <i class="bi bi-archive"></i> Archive
+                                    </button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php endforeach; ?>
