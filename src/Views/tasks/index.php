@@ -1,4 +1,13 @@
 <?php require __DIR__ . '/../header.php'; ?>
+<style>
+.group-header-row[aria-expanded="false"] .group-toggle-icon {
+    transform: rotate(-90deg);
+}
+.group-toggle-icon {
+    transition: transform 0.2s;
+    display: inline-block;
+}
+</style>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -140,13 +149,12 @@
                     }
                     $statusOrder = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', 'WND'];
                     foreach ($statusOrder as $st): 
-                        if (isset($statusCounts[$st]) && $statusCounts[$st] > 0): 
+                        $hasItems = isset($statusCounts[$st]) && $statusCounts[$st] > 0;
                     ?>
-                        <span class="badge <?= getStatusBadgeClass($st) ?> rounded-pill" style="font-size: 0.8rem; padding: 0.35em 0.65em;">
-                            <?= $st ?>: <?= $statusCounts[$st] ?>
+                        <span class="badge <?= getStatusBadgeClass($st) ?> rounded-pill status-pill" data-status-pill="<?= htmlspecialchars($st) ?>" style="font-size: 0.8rem; padding: 0.35em 0.65em; display: <?= $hasItems ? 'inline-block' : 'none' ?>;">
+                            <?= $st ?>: <span class="status-count"><?= $hasItems ? $statusCounts[$st] : 0 ?></span>
                         </span>
                     <?php 
-                        endif;
                     endforeach; 
                     ?>
                 </div>
@@ -186,66 +194,158 @@
                         </tr>
                     </thead>
                     <tbody id="taskList">
-                        <?php foreach ($tasks as $task): ?>
-                        <tr data-id="<?= $task['id'] ?>">
-                            <td class="text-center">
-                                <input type="checkbox" name="task_ids[]" value="<?= $task['id'] ?>" class="task-checkbox">
-                            </td>
-                            <td class="text-center">
-                                <i class="bi bi-grip-vertical handle d-block text-muted" style="cursor: move;"></i>
-                            </td>
-                            <td>
-                                <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none fw-bold">
-                                    <?= htmlspecialchars($task['title']) ?>
-                                </a>
-                                <div class="description-preview">
-                                    <?= strip_tags($task['description']) ?>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge <?= getPriorityBadgeClass($task['priority'] ?? 'Medium') ?>"><?= htmlspecialchars($task['priority'] ?? 'Medium') ?></span>
-                            </td>
-                            <td>
-                                <?php if (($task['type'] ?? 'Bug') === 'Bug'): ?>
-                                    <span class="badge bg-danger">Bug</span>
-                                <?php else: ?>
-                                    <span class="badge bg-info text-dark">Feature</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <select class="form-select form-select-sm inline-status-select fw-bold py-0 px-2 text-center text-white" 
-                                        data-task-id="<?= $task['id'] ?>"
-                                        style="width: auto; display: inline-block; font-size: 0.85rem; border-radius: 5px;">
-                                    <?php 
-                                    $statuses = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', 'WND'];
-                                    foreach ($statuses as $st): 
-                                    ?>
-                                        <option value="<?= $st ?>" <?= $task['status'] === $st ? 'selected' : '' ?>><?= $st ?></option>
+                        <?php 
+                        if ($sort === 'status') {
+                            $groupedTasks = [];
+                            $statusOrder = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', 'WND'];
+                            if (isset($dir) && strtoupper($dir) === 'DESC') {
+                                $statusOrder = array_reverse($statusOrder);
+                            }
+                            foreach ($statusOrder as $st) {
+                                $groupedTasks[$st] = [];
+                            }
+                            foreach ($tasks as $task) {
+                                $st = $task['status'];
+                                $groupedTasks[$st][] = $task;
+                            }
+                            
+                            foreach ($groupedTasks as $groupStatus => $groupTasks): 
+                                if (count($groupTasks) > 0): 
+                        ?>
+                                    <tr class="table-light align-middle group-header-row" data-status-group="<?= htmlspecialchars($groupStatus) ?>" style="cursor: pointer;" data-bs-toggle="collapse" data-bs-target=".status-group-<?= md5($groupStatus) ?>" aria-expanded="true">
+                                        <td class="text-center"><i class="bi bi-chevron-down group-toggle-icon"></i></td>
+                                        <td colspan="8" class="fw-bold">
+                                            <?= htmlspecialchars($groupStatus) ?> (<span class="group-count"><?= count($groupTasks) ?></span>)
+                                        </td>
+                                    </tr>
+                                    <?php foreach ($groupTasks as $task): ?>
+                                    <tr data-id="<?= $task['id'] ?>" draggable="true" data-status-group="<?= htmlspecialchars($groupStatus) ?>" class="collapse show status-group-<?= md5($groupStatus) ?>">
+                                        <td class="text-center">
+                                            <input type="checkbox" name="task_ids[]" value="<?= $task['id'] ?>" class="task-checkbox">
+                                        </td>
+                                        <td class="text-center">
+                                            <i class="bi bi-grip-vertical handle d-block text-muted" style="cursor: move;"></i>
+                                        </td>
+                                        <td>
+                                            <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none fw-bold">
+                                                <?= htmlspecialchars($task['title']) ?>
+                                            </a>
+                                            <div class="description-preview">
+                                                <?= strip_tags($task['description']) ?>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge <?= getPriorityBadgeClass($task['priority'] ?? 'Medium') ?>"><?= htmlspecialchars($task['priority'] ?? 'Medium') ?></span>
+                                        </td>
+                                        <td>
+                                            <?php if (($task['type'] ?? 'Bug') === 'Bug'): ?>
+                                                <span class="badge bg-danger">Bug</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-info text-dark">Feature</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <select class="form-select form-select-sm inline-status-select fw-bold py-0 px-2 text-center text-white" 
+                                                    data-task-id="<?= $task['id'] ?>"
+                                                    style="width: auto; display: inline-block; font-size: 0.85rem; border-radius: 5px;">
+                                                <?php 
+                                                $statuses = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', 'WND'];
+                                                foreach ($statuses as $st): 
+                                                ?>
+                                                    <option value="<?= $st ?>" <?= $task['status'] === $st ? 'selected' : '' ?>><?= $st ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <?php if ($task['comment_count'] > 0): ?>
+                                                <span class="badge bg-secondary rounded-pill"><?= $task['comment_count'] ?></span>
+                                            <?php else: ?>
+                                                <span class="text-muted">-</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="small text-muted"><?= date('M j', strtotime($task['created_at'])) ?></td>
+                                        <td class="text-end">
+                                            <div class="d-flex justify-content-end gap-1">
+                                                <a href="/tasks/<?= $task['id'] ?>/edit" class="btn btn-sm btn-outline-primary py-1 px-2" title="Edit">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <form action="/tasks/<?= $task['id'] ?>/delete" method="POST" class="d-inline mb-0" onsubmit="return confirm('Are you sure you want to delete this task?');">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="Delete">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
                                     <?php endforeach; ?>
-                                </select>
-                            </td>
-                            <td>
-                                <?php if ($task['comment_count'] > 0): ?>
-                                    <span class="badge bg-secondary rounded-pill"><?= $task['comment_count'] ?></span>
-                                <?php else: ?>
-                                    <span class="text-muted">-</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="small text-muted"><?= date('M j', strtotime($task['created_at'])) ?></td>
-                            <td class="text-end">
-                                <div class="d-flex justify-content-end gap-1">
-                                    <a href="/tasks/<?= $task['id'] ?>/edit" class="btn btn-sm btn-outline-primary py-1 px-2" title="Edit">
-                                        <i class="bi bi-pencil"></i>
+                        <?php 
+                                endif;
+                            endforeach;
+                        } else {
+                            foreach ($tasks as $task): 
+                        ?>
+                            <tr data-id="<?= $task['id'] ?>" draggable="true">
+                                <td class="text-center">
+                                    <input type="checkbox" name="task_ids[]" value="<?= $task['id'] ?>" class="task-checkbox">
+                                </td>
+                                <td class="text-center">
+                                    <i class="bi bi-grip-vertical handle d-block text-muted" style="cursor: move;"></i>
+                                </td>
+                                <td>
+                                    <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none fw-bold">
+                                        <?= htmlspecialchars($task['title']) ?>
                                     </a>
-                                    <form action="/tasks/<?= $task['id'] ?>/delete" method="POST" class="d-inline mb-0" onsubmit="return confirm('Are you sure you want to delete this task?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="Delete">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
+                                    <div class="description-preview">
+                                        <?= strip_tags($task['description']) ?>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge <?= getPriorityBadgeClass($task['priority'] ?? 'Medium') ?>"><?= htmlspecialchars($task['priority'] ?? 'Medium') ?></span>
+                                </td>
+                                <td>
+                                    <?php if (($task['type'] ?? 'Bug') === 'Bug'): ?>
+                                        <span class="badge bg-danger">Bug</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-info text-dark">Feature</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm inline-status-select fw-bold py-0 px-2 text-center text-white" 
+                                            data-task-id="<?= $task['id'] ?>"
+                                            style="width: auto; display: inline-block; font-size: 0.85rem; border-radius: 5px;">
+                                        <?php 
+                                        $statuses = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', 'WND'];
+                                        foreach ($statuses as $st): 
+                                        ?>
+                                            <option value="<?= $st ?>" <?= $task['status'] === $st ? 'selected' : '' ?>><?= $st ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                                <td>
+                                    <?php if ($task['comment_count'] > 0): ?>
+                                        <span class="badge bg-secondary rounded-pill"><?= $task['comment_count'] ?></span>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="small text-muted"><?= date('M j', strtotime($task['created_at'])) ?></td>
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <a href="/tasks/<?= $task['id'] ?>/edit" class="btn btn-sm btn-outline-primary py-1 px-2" title="Edit">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form action="/tasks/<?= $task['id'] ?>/delete" method="POST" class="d-inline mb-0" onsubmit="return confirm('Are you sure you want to delete this task?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="Delete">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php 
+                            endforeach;
+                        } 
+                        ?>
                     </tbody>
                 </table>
             </div>
@@ -369,6 +469,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else if (data.success) {
                         selectEl.setAttribute('data-original-val', newStatus);
                         updateInlineSelectClass(selectEl, newStatus);
+                        handlePostStatusUpdateUI(taskId, originalValue, newStatus);
                     } else {
                         alert('Failed to update status');
                         selectEl.value = originalValue;
@@ -403,6 +504,123 @@ document.addEventListener('DOMContentLoaded', function() {
             el.classList.add('bg-secondary');
         }
     }
+
+    // Post-status update UI handler
+    function handlePostStatusUpdateUI(taskId, oldStatus, newStatus) {
+        const row = document.querySelector(`#taskList tr[data-id="${taskId}"]`);
+        if (!row) return;
+
+        const isHideCompleted = document.getElementById('hideCompletedCheck') && document.getElementById('hideCompletedCheck').checked;
+        const isCompletedOrWND = (newStatus === 'Completed' || newStatus === 'WND');
+
+        if (isCompletedOrWND && isHideCompleted) {
+            const titleLink = row.querySelector('a');
+            const descPreview = row.querySelector('.description-preview');
+            
+            if (titleLink) titleLink.style.textDecoration = 'line-through';
+            if (descPreview) descPreview.style.textDecoration = 'line-through';
+            row.style.opacity = '0.6';
+            row.style.backgroundColor = '#f8f9fa';
+
+            const checkbox = row.querySelector('.task-checkbox');
+            const select = row.querySelector('.inline-status-select');
+            if (checkbox) checkbox.disabled = true;
+            if (select) select.disabled = true;
+
+            setTimeout(() => {
+                row.style.transition = 'all 0.5s ease';
+                row.style.opacity = '0';
+                setTimeout(() => {
+                    row.remove();
+                    updateHeaderStatusCounts();
+                    updateGroupHeaderCounts();
+                }, 500);
+            }, 3000);
+        } else {
+            const isGroupedByStatus = <?= json_encode($sort === 'status') ?>;
+            if (isGroupedByStatus) {
+                let targetStatus = newStatus;
+                if (!isHideCompleted && isCompletedOrWND) {
+                    targetStatus = 'Completed';
+                }
+
+                let targetHeader = null;
+                document.querySelectorAll('#taskList tr.group-header-row').forEach(headerRow => {
+                    if (headerRow.getAttribute('data-status-group') === targetStatus) {
+                        targetHeader = headerRow;
+                    }
+                });
+
+                if (targetHeader) {
+                    // Extract the class target name
+                    const targetClass = targetHeader.getAttribute('data-bs-target').replace('.', '');
+                    
+                    // Remove old status class
+                    row.classList.forEach(className => {
+                        if (className.startsWith('status-group-')) {
+                            row.classList.remove(className);
+                        }
+                    });
+                    
+                    row.classList.add(targetClass);
+                    row.setAttribute('data-status-group', targetStatus);
+
+                    let insertAfterEl = targetHeader;
+                    let sibling = targetHeader.nextElementSibling;
+                    while (sibling && !sibling.classList.contains('group-header-row')) {
+                        insertAfterEl = sibling;
+                        sibling = sibling.nextElementSibling;
+                    }
+                    
+                    if (insertAfterEl.nextElementSibling) {
+                        insertAfterEl.parentNode.insertBefore(row, insertAfterEl.nextElementSibling);
+                    } else {
+                        insertAfterEl.parentNode.appendChild(row);
+                    }
+                } else {
+                    window.location.reload();
+                    return;
+                }
+            }
+            updateHeaderStatusCounts();
+            updateGroupHeaderCounts();
+        }
+    }
+
+    // Recalculates and updates header summary pills
+    function updateHeaderStatusCounts() {
+        const counts = {};
+        document.querySelectorAll('#taskList tr[data-id]').forEach(row => {
+            const select = row.querySelector('.inline-status-select');
+            if (select) {
+                const status = select.value;
+                counts[status] = (counts[status] || 0) + 1;
+            }
+        });
+
+        document.querySelectorAll('.status-pill').forEach(pill => {
+            const status = pill.getAttribute('data-status-pill');
+            const count = counts[status] || 0;
+            if (count > 0) {
+                pill.style.display = 'inline-block';
+                pill.querySelector('.status-count').textContent = count;
+            } else {
+                pill.style.display = 'none';
+            }
+        });
+    }
+
+    // Recalculates and updates group header counts
+    function updateGroupHeaderCounts() {
+        document.querySelectorAll('#taskList tr.group-header-row').forEach(headerRow => {
+            const statusGroup = headerRow.getAttribute('data-status-group');
+            const count = document.querySelectorAll(`#taskList tr[data-id][data-status-group="${statusGroup}"]`).length;
+            const countSpan = headerRow.querySelector('.group-count');
+            if (countSpan) {
+                countSpan.textContent = count;
+            }
+        });
+    }
     
     // Initial coloring of all inline status selectors
     document.querySelectorAll('.inline-status-select').forEach(select => {
@@ -417,7 +635,9 @@ document.addEventListener('DOMContentLoaded', function() {
         onEnd: function (evt) {
             var order = [];
             el.querySelectorAll('tr').forEach(function(row) {
-                order.push(row.getAttribute('data-id'));
+                if (row.getAttribute('data-id')) {
+                    order.push(row.getAttribute('data-id'));
+                }
             });
             
             fetch('/tasks/reorder', {
@@ -426,6 +646,75 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify({ order: order })
             });
         }
+    });
+
+    // Drag and drop nesting for task rows
+    document.querySelectorAll('#taskList tr[data-id]').forEach(function(row) {
+        row.addEventListener('dragstart', function(e) {
+            if (e.target.closest('.handle')) {
+                return;
+            }
+            e.dataTransfer.setData('text/plain', this.getAttribute('data-id'));
+            e.dataTransfer.effectAllowed = 'copyMove';
+            this.classList.add('dragging-for-nest');
+        });
+
+        row.addEventListener('dragend', function(e) {
+            this.classList.remove('dragging-for-nest');
+            document.querySelectorAll('#taskList tr[data-id]').forEach(r => {
+                r.style.backgroundColor = '';
+                r.style.border = '';
+            });
+        });
+
+        row.addEventListener('dragover', function(e) {
+            var draggingEl = document.querySelector('.dragging-for-nest');
+            if (draggingEl && draggingEl !== this) {
+                e.preventDefault();
+                this.style.backgroundColor = '#e2f0d9';
+                this.style.border = '2px dashed #2e7d32';
+            }
+        });
+
+        row.addEventListener('dragleave', function(e) {
+            this.style.backgroundColor = '';
+            this.style.border = '';
+        });
+
+        row.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.style.backgroundColor = '';
+            this.style.border = '';
+            var draggingEl = document.querySelector('.dragging-for-nest');
+            if (!draggingEl) {
+                return;
+            }
+            var sourceId = draggingEl.getAttribute('data-id');
+            var destId = this.getAttribute('data-id');
+            
+            if (sourceId && destId && sourceId !== destId) {
+                var targetTitle = this.querySelector('a').textContent.trim();
+                if (confirm('Are you sure you want to make this task a sub-task of "' + targetTitle + '"?')) {
+                    fetch('/tasks/nest', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ source_id: sourceId, dest_id: destId })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            alert(data.error || 'Failed to make task a sub-task.');
+                            window.location.reload();
+                        }
+                    })
+                    .catch(() => {
+                        window.location.reload();
+                    });
+                }
+            }
+        });
     });
 });
 </script>
