@@ -9,7 +9,7 @@ class TaskController {
         return $stmt->fetch();
     }
 
-    private function getIssues($projectId, $orderBy = 'created_at DESC', $hideCompleted = false, $onlyMyIssues = false) {
+    private function getIssues($projectId, $orderBy = 'created_at DESC', $hideCompleted = false, $onlyMyIssues = false, $statusFilter = null, $authorFilter = null, $assigneeFilter = null, $priorityFilter = null, $typeFilter = null) {
         $db = Database::connect();
         // Allow safe column names for sorting
         $allowedSorts = ['created_at', 'updated_at', 'title', 'status', 'type', 'sort_order', 'priority', 'assigned_to_name', 'creator_name'];
@@ -30,6 +30,35 @@ class TaskController {
         if ($onlyMyIssues) {
             $whereClause .= " AND i.assigned_to_id = ?";
             $params[] = Auth::user()['id'];
+        }
+
+        if ($statusFilter !== null && $statusFilter !== '') {
+            $whereClause .= " AND i.status = ?";
+            $params[] = $statusFilter;
+        }
+
+        if ($authorFilter !== null && $authorFilter !== '') {
+            $whereClause .= " AND i.creator_id = ?";
+            $params[] = $authorFilter;
+        }
+
+        if ($assigneeFilter !== null && $assigneeFilter !== '') {
+            if ($assigneeFilter === 'unassigned') {
+                $whereClause .= " AND i.assigned_to_id IS NULL";
+            } else {
+                $whereClause .= " AND i.assigned_to_id = ?";
+                $params[] = $assigneeFilter;
+            }
+        }
+
+        if ($priorityFilter !== null && $priorityFilter !== '') {
+            $whereClause .= " AND i.priority = ?";
+            $params[] = $priorityFilter;
+        }
+
+        if ($typeFilter !== null && $typeFilter !== '') {
+            $whereClause .= " AND i.type = ?";
+            $params[] = $typeFilter;
         }
 
         $orderClause = "$col $dir";
@@ -109,7 +138,37 @@ class TaskController {
 
         $onlyMyIssues = isset($_GET['my_issues']) && $_GET['my_issues'] == '1';
 
-        $tasks = $this->getIssues($projectId, "$sort $dir", $hideCompleted, $onlyMyIssues);
+        $statusFilter = $_GET['status_filter'] ?? '';
+        $authorFilter = $_GET['author_filter'] ?? '';
+        $assigneeFilter = $_GET['assignee_filter'] ?? '';
+        $priorityFilter = $_GET['priority_filter'] ?? '';
+        $typeFilter = $_GET['type_filter'] ?? '';
+
+        $db = Database::connect();
+        
+        // Get unique authors present in this project's tasks
+        $authorStmt = $db->prepare("
+            SELECT DISTINCT u.id, u.username 
+            FROM tasks t 
+            JOIN users u ON t.creator_id = u.id 
+            WHERE t.project_id = ? AND t.is_archived = 0
+            ORDER BY u.username
+        ");
+        $authorStmt->execute([$projectId]);
+        $authors = $authorStmt->fetchAll();
+
+        // Get unique assignees present in this project's tasks
+        $assigneeStmt = $db->prepare("
+            SELECT DISTINCT u.id, u.username 
+            FROM tasks t 
+            JOIN users u ON t.assigned_to_id = u.id 
+            WHERE t.project_id = ? AND t.is_archived = 0
+            ORDER BY u.username
+        ");
+        $assigneeStmt->execute([$projectId]);
+        $assignees = $assigneeStmt->fetchAll();
+
+        $tasks = $this->getIssues($projectId, "$sort $dir", $hideCompleted, $onlyMyIssues, $statusFilter, $authorFilter, $assigneeFilter, $priorityFilter, $typeFilter);
         
         $users = $this->getAllUsers(); // For assignment in modals if needed
 
@@ -699,6 +758,42 @@ class TaskController {
                 Logger::log('Tasks Column Archived', "Archived all '$status' tasks in Project ID: $projectId");
             }
             header("Location: /projects/$projectId/kanban");
+            exit;
+        }
+    }
+
+    public function batchAction() {
+        Auth::requireLogin();
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['task_ids']) && is_array($_POST['task_ids'])) {
+            $taskIds = array_map('intval', $_POST['task_ids']);
+            $action = $_POST['batch_action'] ?? '';
+            $projectId = $_POST['project_id'] ?? '';
+            
+            if (!empty($taskIds)) {
+                $db = Database::connect();
+                $placeholders = str_repeat('?,', count($taskIds) - 1) . '?';
+                
+                if ($action === 'archive') {
+                    $stmt = $db->prepare("UPDATE tasks SET is_archived = 1, updated_at = CURRENT_TIMESTAMP WHERE id IN ($placeholders)");
+                    $stmt->execute($taskIds);
+                    Logger::log('Tasks Archived (Batch)', "Archived tasks count: " . count($taskIds));
+                } elseif ($action === 'delete') {
+                    $stmt = $db->prepare("DELETE FROM tasks WHERE id IN ($placeholders)");
+                    $stmt->execute($taskIds);
+                    Logger::log('Tasks Deleted (Batch)', "Deleted tasks count: " . count($taskIds));
+                } elseif ($action === 'status') {
+                    $newStatus = $_POST['status_value'] ?? 'Unassigned';
+                    $stmt = $db->prepare("UPDATE tasks SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN ($placeholders)");
+                    $params = array_merge([$newStatus], $taskIds);
+                    $stmt->execute($params);
+                    Logger::log('Tasks Status Updated (Batch)', "Changed status to $newStatus for tasks count: " . count($taskIds));
+                }
+            }
+            if ($projectId) {
+                header("Location: /projects/$projectId");
+            } else {
+                header("Location: /");
+            }
             exit;
         }
     }

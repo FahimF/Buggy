@@ -142,6 +142,8 @@ if ($uri === '/' || $uri === '/dashboard') {
     (new TaskController())->nestTask();
 } elseif ($uri === '/tasks/reorder') {
     (new TaskController())->reorder();
+} elseif ($uri === '/tasks/batch-action') {
+    (new TaskController())->batchAction();
 } elseif (preg_match('#^/tasks/(\d+)/archive$#', $uri, $matches)) {
     (new TaskController())->archive($matches[1]);
 } elseif (preg_match('#^/projects/(\d+)/archive-status$#', $uri, $matches)) {
