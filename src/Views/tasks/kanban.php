@@ -11,6 +11,10 @@
         <span class="badge bg-secondary ms-2">Kanban Board</span>
     </div>
     <div>
+        <div class="form-check form-switch d-inline-block align-middle me-3 mb-0">
+            <input class="form-check-input" type="checkbox" id="hideDescriptionsCheck">
+            <label class="form-check-label" for="hideDescriptionsCheck">Hide Descriptions</label>
+        </div>
         <div class="dropdown d-inline-block me-2">
             <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="viewModeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="bi bi-eye"></i> Kanban View
@@ -47,15 +51,25 @@
                 <?php foreach ($columnTasks as $task): ?>
                 <div class="card mb-2 shadow-sm kanban-card" data-id="<?= $task['id'] ?>">
                     <div class="card-body p-3">
-                        <div class="mb-2">
-                            <?php if (($task['type'] ?? 'Bug') === 'Bug'): ?>
-                                <span class="badge bg-danger rounded-pill" style="font-size: 0.7em;">Bug</span>
-                            <?php else: ?>
-                                <span class="badge bg-info text-dark rounded-pill" style="font-size: 0.7em;">Feature</span>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <?php if (($task['type'] ?? 'Bug') === 'Bug'): ?>
+                                    <span class="badge bg-danger rounded-pill" style="font-size: 0.7em;">Bug</span>
+                                <?php else: ?>
+                                    <span class="badge bg-info text-dark rounded-pill" style="font-size: 0.7em;">Feature</span>
+                                <?php endif; ?>
+                                <span class="badge <?= getPriorityBadgeClass($task['priority'] ?? 'Medium') ?> rounded-pill" style="font-size: 0.7em;">
+                                    <?= htmlspecialchars($task['priority'] ?? 'Medium') ?>
+                                </span>
+                            </div>
+                            <?php if (in_array($task['status'], ['Completed', 'WND'])): ?>
+                                <form action="/tasks/<?= $task['id'] ?>/archive" method="POST" class="d-inline mb-0" onsubmit="return confirm('Are you sure you want to archive this task?');">
+                                    <input type="hidden" name="redirect_to" value="/projects/<?= $project['id'] ?>/kanban">
+                                    <button type="submit" class="btn btn-link text-muted p-0 border-0 lh-1" title="Archive Task">
+                                        <i class="bi bi-archive" style="font-size: 0.85rem;"></i>
+                                    </button>
+                                </form>
                             <?php endif; ?>
-                            <span class="badge <?= getPriorityBadgeClass($task['priority'] ?? 'Medium') ?> rounded-pill" style="font-size: 0.7em;">
-                                <?= htmlspecialchars($task['priority'] ?? 'Medium') ?>
-                            </span>
                         </div>
                         <h6 class="card-title">
                             <a href="/tasks/<?= $task['id'] ?>" class="text-decoration-none text-dark"><?= htmlspecialchars($task['title']) ?></a>
@@ -74,16 +88,6 @@
                                 </span>
                             <?php endif; ?>
                         </div>
-                        <?php if (in_array($task['status'], ['Completed', 'WND'])): ?>
-                            <div class="text-end mt-2 pt-2 border-top">
-                                <form action="/tasks/<?= $task['id'] ?>/archive" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this task?');">
-                                    <input type="hidden" name="redirect_to" value="/projects/<?= $project['id'] ?>/kanban">
-                                    <button type="submit" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size: 0.75rem;">
-                                        <i class="bi bi-archive"></i> Archive
-                                    </button>
-                                </form>
-                            </div>
-                        <?php endif; ?>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -141,6 +145,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Hide Descriptions toggle functionality
+    const hideDescCheck = document.getElementById('hideDescriptionsCheck');
+    const updateDescriptionVisibility = () => {
+        const hide = hideDescCheck.checked;
+        document.querySelectorAll('.description-preview').forEach(desc => {
+            desc.style.display = hide ? 'none' : 'block';
+        });
+    };
+
+    if (hideDescCheck) {
+        const hideDescriptionsVal = localStorage.getItem('kanban_hide_descriptions') === 'true';
+        hideDescCheck.checked = hideDescriptionsVal;
+        updateDescriptionVisibility();
+
+        hideDescCheck.addEventListener('change', function() {
+            localStorage.setItem('kanban_hide_descriptions', this.checked);
+            updateDescriptionVisibility();
+        });
+    }
 });
 </script>
 
