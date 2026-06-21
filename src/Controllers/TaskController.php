@@ -80,6 +80,10 @@ class TaskController {
                ELSE 6 END $dir";
        }
 
+        if ($col !== 'sort_order') {
+            $orderClause .= ", i.sort_order ASC";
+        }
+
         $sql = "SELECT i.*, u.username as assigned_to_name, c.username as creator_name,
                 (SELECT COUNT(*) FROM comments WHERE task_id = i.id) as comment_count
                 FROM tasks i 
