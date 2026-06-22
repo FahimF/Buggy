@@ -379,9 +379,8 @@
                         `;
                     });
                     
-                    var subtasksSection = '';
+                    var subtasksHtml = '';
                     if (subtasks && subtasks.length > 0) {
-                        var subtasksHtml = '';
                         subtasks.forEach(st => {
                             var isComp = parseInt(st.is_completed) === 1;
                             var checked = isComp ? 'checked' : '';
@@ -395,16 +394,25 @@
                                 </div>
                             `;
                         });
-                        subtasksSection = `
-                            <hr>
-                            <div class="mt-4">
-                                <h5>Sub-tasks</h5>
-                                <div id="modalSubtasksContainer" class="mb-3">
-                                    ${subtasksHtml}
-                                </div>
-                            </div>
-                        `;
+                    } else {
+                        subtasksHtml = '<p class="text-muted small mb-0">No sub-tasks yet.</p>';
                     }
+                    
+                    var subtasksSection = `
+                        <hr>
+                        <div class="mt-4">
+                            <h5>Sub-tasks</h5>
+                            <div id="modalSubtasksContainer" class="mb-3">
+                                ${subtasksHtml}
+                            </div>
+                            <form id="modalAddSubtaskForm" class="mt-2" style="max-width: 500px;">
+                                <div class="input-group">
+                                    <input type="text" id="modalSubtaskDescription" class="form-control form-control-sm" placeholder="New sub-task..." required>
+                                    <button class="btn btn-primary btn-sm" type="submit">Add Sub-task</button>
+                                </div>
+                            </form>
+                        </div>
+                    `;
                     
                     var html = `
                         <div class="row">
@@ -525,6 +533,33 @@
                             showTaskDetails(task.id);
                         });
                     };
+
+                    var modalAddSubtaskForm = document.getElementById('modalAddSubtaskForm');
+                    if (modalAddSubtaskForm) {
+                        modalAddSubtaskForm.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            var input = document.getElementById('modalSubtaskDescription');
+                            var description = input.value.trim();
+                            if (!description) return;
+
+                            fetch('/tasks/sub-tasks/create', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ issue_id: task.id, description: description })
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                if (data.id) {
+                                    showTaskDetails(task.id);
+                                } else {
+                                    alert(data.error || 'Failed to create sub-task');
+                                }
+                            })
+                            .catch(() => {
+                                alert('An error occurred');
+                            });
+                        });
+                    }
                     
                     // Bind delete comment forms to submit via AJAX
                     contentDiv.querySelectorAll('.comment-delete-form').forEach(function(form) {

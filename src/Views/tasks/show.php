@@ -41,13 +41,19 @@
                     echo $cleanDesc;
                 ?></div>
                 
-                <div id="subtasksSection" style="display: none;">
+                <div id="subtasksSection">
                     <hr>
                     <div class="mt-4">
                         <h5>Sub-tasks</h5>
                         <div id="taskSubtasksContainer" class="mb-3">
                             <!-- Loaded dynamically -->
                         </div>
+                        <form id="addSubtaskForm" class="mt-2" style="max-width: 500px;">
+                            <div class="input-group">
+                                <input type="text" id="subtaskDescription" class="form-control form-control-sm" placeholder="New sub-task..." required>
+                                <button class="btn btn-primary btn-sm" type="submit">Add Sub-task</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -164,7 +170,6 @@
 
     function loadSubtasks() {
         const container = document.getElementById('taskSubtasksContainer');
-        const section = document.getElementById('subtasksSection');
         
         fetch('/tasks/sub-tasks?issue_id=' + taskId)
             .then(res => res.json())
@@ -172,11 +177,10 @@
                 container.innerHTML = '';
 
                 if (subtasks.length === 0) {
-                    section.style.display = 'none';
+                    container.innerHTML = '<p class="text-muted small mb-0">No sub-tasks yet.</p>';
                     return;
                 }
 
-                section.style.display = 'block';
                 subtasks.forEach(st => {
                     const div = document.createElement('div');
                     div.className = 'd-flex align-items-center border-bottom py-2';
@@ -206,6 +210,34 @@
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    const addSubtaskForm = document.getElementById('addSubtaskForm');
+    if (addSubtaskForm) {
+        addSubtaskForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const input = document.getElementById('subtaskDescription');
+            const description = input.value.trim();
+            if (!description) return;
+
+            fetch('/tasks/sub-tasks/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ issue_id: taskId, description: description })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.id) {
+                    input.value = '';
+                    loadSubtasks();
+                } else {
+                    alert(data.error || 'Failed to create sub-task');
+                }
+            })
+            .catch(() => {
+                alert('An error occurred');
+            });
+        });
     }
 
     loadSubtasks();
