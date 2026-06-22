@@ -633,18 +633,96 @@ document.addEventListener('DOMContentLoaded', function() {
         handle: '.handle',
         animation: 150,
         onEnd: function (evt) {
-            var order = [];
-            el.querySelectorAll('tr').forEach(function(row) {
-                if (row.getAttribute('data-id')) {
-                    order.push(row.getAttribute('data-id'));
-                }
-            });
+            const isGroupedByStatus = <?= json_encode($sort === 'status') ?>;
+            let newStatus = null;
+            let targetHeader = null;
             
-            fetch('/tasks/reorder', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ order: order })
-            });
+            if (isGroupedByStatus) {
+                let prev = evt.item.previousElementSibling;
+                while (prev) {
+                    if (prev.classList.contains('group-header-row')) {
+                        newStatus = prev.getAttribute('data-status-group');
+                        targetHeader = prev;
+                        break;
+                    }
+                    prev = prev.previousElementSibling;
+                }
+            }
+
+            const oldStatus = evt.item.getAttribute('data-status-group');
+
+            if (isGroupedByStatus && newStatus && newStatus !== oldStatus) {
+                const taskId = evt.item.getAttribute('data-id');
+                const order = [];
+                el.querySelectorAll('tr').forEach(function(row) {
+                    if (row.getAttribute('data-id')) {
+                        order.push(row.getAttribute('data-id'));
+                    }
+                });
+
+                function updateDragStatus(force) {
+                    fetch('/tasks/update_status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ issue_id: taskId, status: newStatus, order: order, force_complete_subtasks: force })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.error === 'incomplete_subtasks') {
+                            if (confirm('This task has ' + data.count + ' incomplete sub-task(s). Would you like to mark all sub-tasks as completed and complete the task?')) {
+                                updateDragStatus(true);
+                            } else {
+                                window.location.reload();
+                            }
+                        } else if (data.success) {
+                            evt.item.setAttribute('data-status-group', newStatus);
+                            const selectEl = evt.item.querySelector('.inline-status-select');
+                            if (selectEl) {
+                                selectEl.value = newStatus;
+                                selectEl.setAttribute('data-original-val', newStatus);
+                                updateInlineSelectClass(selectEl, newStatus);
+                            }
+                            
+                            const targetClass = targetHeader.getAttribute('data-bs-target').replace('.', '');
+                            evt.item.classList.forEach(className => {
+                                if (className.startsWith('status-group-')) {
+                                    evt.item.classList.remove(className);
+                                }
+                            });
+                            evt.item.classList.add(targetClass);
+
+                            const isHideCompleted = document.getElementById('hideCompletedCheck') && document.getElementById('hideCompletedCheck').checked;
+                            if (isHideCompleted && (newStatus === 'Completed' || newStatus === 'WND')) {
+                                handlePostStatusUpdateUI(taskId, oldStatus, newStatus);
+                            } else {
+                                updateHeaderStatusCounts();
+                                updateGroupHeaderCounts();
+                            }
+                        } else {
+                            alert('Failed to update status');
+                            window.location.reload();
+                        }
+                    })
+                    .catch(err => {
+                        alert('An error occurred');
+                        window.location.reload();
+                    });
+                }
+                updateDragStatus(false);
+            } else {
+                var order = [];
+                el.querySelectorAll('tr').forEach(function(row) {
+                    if (row.getAttribute('data-id')) {
+                        order.push(row.getAttribute('data-id'));
+                    }
+                });
+                
+                fetch('/tasks/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order: order })
+                });
+            }
         }
     });
 
