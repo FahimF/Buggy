@@ -256,7 +256,7 @@
                                                 <?php endforeach; ?>
                                             </select>
                                         </td>
-                                        <td>
+                                        <td class="comment-count-cell" data-task-id="<?= $task['id'] ?>">
                                             <?php if ($task['comment_count'] > 0): ?>
                                                 <span class="badge bg-secondary rounded-pill"><?= $task['comment_count'] ?></span>
                                             <?php else: ?>
@@ -321,7 +321,7 @@
                                         <?php endforeach; ?>
                                     </select>
                                 </td>
-                                <td>
+                                <td class="comment-count-cell" data-task-id="<?= $task['id'] ?>">
                                     <?php if ($task['comment_count'] > 0): ?>
                                         <span class="badge bg-secondary rounded-pill"><?= $task['comment_count'] ?></span>
                                     <?php else: ?>

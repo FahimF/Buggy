@@ -322,6 +322,16 @@
                     var subtasks = data.subtasks;
                     var currentUserId = data.current_user_id;
                     var isAdmin = data.is_admin;
+
+                    // Dynamically update comment count on the background list view if present
+                    var listCell = document.querySelector(`.comment-count-cell[data-task-id="${task.id}"]`);
+                    if (listCell) {
+                        if (comments.length > 0) {
+                            listCell.innerHTML = `<span class="badge bg-secondary rounded-pill">${comments.length}</span>`;
+                        } else {
+                            listCell.innerHTML = `<span class="text-muted">-</span>`;
+                        }
+                    }
                     
                     var priorityClass = 'bg-secondary';
                     if (task.priority === 'High') priorityClass = 'bg-danger';
