@@ -137,6 +137,7 @@
                                     <select name="status" class="form-select">
                                         <option value="Unassigned" ${task.status === 'Unassigned' ? 'selected' : ''}>Unassigned</option>
                                         <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                        <option value="WFR" ${task.status === 'WFR' ? 'selected' : ''}>WFR</option>
                                         <option value="Ready for QA" ${task.status === 'Ready for QA' ? 'selected' : ''}>Ready for QA</option>
                                         <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
                                         <option value="WND" ${task.status === 'WND' ? 'selected' : ''}>WND</option>
@@ -343,6 +344,7 @@
                     var statusBadgeClass = 'bg-secondary';
                     if (task.status === 'Unassigned') statusBadgeClass = 'bg-secondary';
                     else if (task.status === 'In Progress') statusBadgeClass = 'bg-warning text-dark';
+                    else if (task.status === 'WFR') statusBadgeClass = 'bg-info text-dark';
                     else if (task.status === 'Ready for QA') statusBadgeClass = 'bg-orange';
                     else if (task.status === 'Completed') statusBadgeClass = 'bg-success';
                     else if (task.status === 'WND') statusBadgeClass = 'bg-danger';

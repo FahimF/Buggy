@@ -22,7 +22,6 @@
             <ul class="dropdown-menu" aria-labelledby="viewModeDropdown">
                 <li><a class="dropdown-item active" href="/projects/<?= $project['id'] ?>?view=list">List View</a></li>
                 <li><a class="dropdown-item" href="/projects/<?= $project['id'] ?>/kanban">Kanban View</a></li>
-                <li><a class="dropdown-item" href="/projects/<?= $project['id'] ?>/status">Status View</a></li>
             </ul>
         </div>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
@@ -43,7 +42,7 @@
                 <select name="status_filter" class="form-select form-select-sm">
                     <option value="">-- All Statuses --</option>
                     <?php 
-                    $statuses = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', 'WND'];
+                    $statuses = ['Unassigned', 'In Progress', 'WFR', 'Ready for QA', 'Completed', 'WND'];
                     foreach ($statuses as $statusOpt): 
                     ?>
                         <option value="<?= $statusOpt ?>" <?= (isset($statusFilter) && $statusFilter === $statusOpt) ? 'selected' : '' ?>><?= $statusOpt ?></option>
@@ -147,7 +146,7 @@
                         $status = $t['status'];
                         $statusCounts[$status] = ($statusCounts[$status] ?? 0) + 1;
                     }
-                    $statusOrder = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', 'WND'];
+                    $statusOrder = ['Unassigned', 'In Progress', 'WFR', 'Ready for QA', 'Completed', 'WND'];
                     foreach ($statusOrder as $st): 
                         $hasItems = isset($statusCounts[$st]) && $statusCounts[$st] > 0;
                     ?>
@@ -197,7 +196,7 @@
                         <?php 
                         if ($sort === 'status') {
                             $groupedTasks = [];
-                            $statusOrder = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', 'WND'];
+                            $statusOrder = ['Unassigned', 'In Progress', 'WFR', 'Ready for QA', 'Completed', 'WND'];
                             if (isset($dir) && strtoupper($dir) === 'DESC') {
                                 $statusOrder = array_reverse($statusOrder);
                             }
@@ -249,7 +248,7 @@
                                                     data-task-id="<?= $task['id'] ?>"
                                                     style="width: auto; display: inline-block; font-size: 0.85rem; border-radius: 5px;">
                                                 <?php 
-                                                $statuses = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', 'WND'];
+                                                $statuses = ['Unassigned', 'In Progress', 'WFR', 'Ready for QA', 'Completed', 'WND'];
                                                 foreach ($statuses as $st): 
                                                 ?>
                                                     <option value="<?= $st ?>" <?= $task['status'] === $st ? 'selected' : '' ?>><?= $st ?></option>
@@ -314,7 +313,7 @@
                                             data-task-id="<?= $task['id'] ?>"
                                             style="width: auto; display: inline-block; font-size: 0.85rem; border-radius: 5px;">
                                         <?php 
-                                        $statuses = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', 'WND'];
+                                        $statuses = ['Unassigned', 'In Progress', 'WFR', 'Ready for QA', 'Completed', 'WND'];
                                         foreach ($statuses as $st): 
                                         ?>
                                             <option value="<?= $st ?>" <?= $task['status'] === $st ? 'selected' : '' ?>><?= $st ?></option>
@@ -367,6 +366,7 @@
                     <select id="batchStatusSelect" class="form-select">
                         <option value="Unassigned">Unassigned</option>
                         <option value="In Progress">In Progress</option>
+                        <option value="WFR">WFR</option>
                         <option value="Ready for QA">Ready for QA</option>
                         <option value="Completed">Completed</option>
                         <option value="WND">WND</option>
@@ -493,6 +493,9 @@ document.addEventListener('DOMContentLoaded', function() {
             el.classList.add('bg-secondary');
         } else if (status === 'In Progress') {
             el.classList.add('bg-warning', 'text-dark');
+            el.classList.remove('text-white');
+        } else if (status === 'WFR') {
+            el.classList.add('bg-info', 'text-dark');
             el.classList.remove('text-white');
         } else if (status === 'Ready for QA') {
             el.classList.add('bg-orange');

@@ -74,10 +74,11 @@ class TaskController {
             $orderClause = "CASE 
                WHEN status = 'Unassigned' THEN 1 
                WHEN status = 'In Progress' THEN 2 
-               WHEN status = 'Ready for QA' THEN 3 
-               WHEN status = 'Completed' THEN 4 
-               WHEN status = 'WND' THEN 5
-               ELSE 6 END $dir";
+               WHEN status = 'WFR' THEN 3
+               WHEN status = 'Ready for QA' THEN 4 
+               WHEN status = 'Completed' THEN 5 
+               WHEN status = 'WND' THEN 6
+               ELSE 7 END $dir";
        }
 
         if ($col !== 'sort_order') {
@@ -189,7 +190,7 @@ class TaskController {
         if (!$project) die("Project not found");
 
         $tasks = $this->getIssues($projectId, 'sort_order ASC');
-        $columns = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', "WND"];
+        $columns = ['Unassigned', 'In Progress', 'WFR', 'Ready for QA', 'Completed', "WND"];
         
         // Group by status
         $kanbanData = array_fill_keys($columns, []);
@@ -204,36 +205,7 @@ class TaskController {
         require __DIR__ . '/../Views/tasks/kanban.php';
     }
 
-    public function status($projectId) {
-        Auth::requireLogin();
-        
-        $_SESSION['task_view_mode'] = 'status';
 
-        $project = $this->getProject($projectId);
-        if (!$project) die("Project not found");
-
-        $tasks = $this->getIssues($projectId, 'sort_order ASC', false, false);
-        
-        // Group into In Progress, Unassigned, and Ready for QA
-        $statusData = [
-            'In Progress' => [],
-            'Unassigned' => [],
-            'Ready for QA' => []
-        ];
-        foreach ($tasks as $task) {
-            if ($task['status'] === 'In Progress') {
-                $statusData['In Progress'][] = $task;
-            } elseif ($task['status'] === 'Unassigned') {
-                $statusData['Unassigned'][] = $task;
-            } elseif ($task['status'] === 'Ready for QA') {
-                $statusData['Ready for QA'][] = $task;
-            }
-        }
-
-        $users = $this->getAllUsers();
-        
-        require __DIR__ . '/../Views/tasks/status.php';
-    }
 
     public function create() {
         Auth::requireLogin();

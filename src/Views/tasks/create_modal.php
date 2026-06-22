@@ -45,6 +45,7 @@
                             <select name="status" class="form-select">
                                 <option value="Unassigned">Unassigned</option>
                                 <option value="In Progress">In Progress</option>
+                                <option value="WFR">WFR</option>
                                 <option value="Ready for QA">Ready for QA</option>
                                 <option value="Completed">Completed</option>
                                 <option value="WND">WND</option>

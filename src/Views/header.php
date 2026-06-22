@@ -65,6 +65,8 @@ function getStatusBadgeClass($status) {
             return 'bg-secondary';
         case 'In Progress':
             return 'bg-warning text-dark';
+        case 'WFR':
+            return 'bg-info text-dark';
         case 'Ready for QA':
             return 'bg-orange';
         case 'Completed':

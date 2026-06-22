@@ -40,7 +40,7 @@
                     <label class="form-label">Status</label>
                     <select name="status" class="form-select">
                         <?php 
-                        $statuses = ['Unassigned', 'In Progress', 'Ready for QA', 'Completed', "WND"];
+                        $statuses = ['Unassigned', 'In Progress', 'WFR', 'Ready for QA', 'Completed', "WND"];
                         foreach ($statuses as $status): 
                         ?>
                             <option value="<?= $status ?>" <?= $task['status'] === $status ? 'selected' : '' ?>>
