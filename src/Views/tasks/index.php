@@ -580,6 +580,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         insertAfterEl.parentNode.appendChild(row);
                     }
+
+                    if (targetHeader.getAttribute('aria-expanded') === 'false') {
+                        row.classList.remove('show');
+                    } else {
+                        row.classList.add('show');
+                    }
                 } else {
                     window.location.reload();
                     return;
@@ -694,6 +700,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                             evt.item.classList.add(targetClass);
 
+                            if (targetHeader.getAttribute('aria-expanded') === 'false') {
+                                evt.item.classList.remove('show');
+                            } else {
+                                evt.item.classList.add('show');
+                            }
+
                             const isHideCompleted = document.getElementById('hideCompletedCheck') && document.getElementById('hideCompletedCheck').checked;
                             if (isHideCompleted && (newStatus === 'Completed' || newStatus === 'WND')) {
                                 handlePostStatusUpdateUI(taskId, oldStatus, newStatus);
@@ -797,6 +809,48 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    <?php if ($sort === 'status'): ?>
+    (function() {
+        const projectId = <?= json_encode($project['id']) ?>;
+        const storageKey = `collapsed_groups_project_${projectId}`;
+        let collapsedGroups = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+        // Apply collapsed state on page load
+        collapsedGroups.forEach(status => {
+            const header = document.querySelector(`.group-header-row[data-status-group="${status}"]`);
+            if (header) {
+                header.setAttribute('aria-expanded', 'false');
+                const targetSelector = header.getAttribute('data-bs-target');
+                if (targetSelector) {
+                    document.querySelectorAll(targetSelector).forEach(row => {
+                        row.classList.remove('show');
+                    });
+                }
+            }
+        });
+
+        // Listen for collapse changes
+        document.querySelectorAll('.group-header-row').forEach(header => {
+            header.addEventListener('click', function() {
+                setTimeout(() => {
+                    const status = this.getAttribute('data-status-group');
+                    const isExpanded = this.getAttribute('aria-expanded') === 'true';
+                    
+                    let collapsedGroups = JSON.parse(localStorage.getItem(storageKey) || '[]');
+                    if (!isExpanded) {
+                        if (!collapsedGroups.includes(status)) {
+                            collapsedGroups.push(status);
+                        }
+                    } else {
+                        collapsedGroups = collapsedGroups.filter(s => s !== status);
+                    }
+                    localStorage.setItem(storageKey, JSON.stringify(collapsedGroups));
+                }, 50);
+            });
+        });
+    })();
+    <?php endif; ?>
 });
 </script>
 
