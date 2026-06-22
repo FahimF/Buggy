@@ -345,7 +345,7 @@
                         }
                         if (currentUserId == c.user_id || isAdmin) {
                             commentActions += `
-                                <form action="/comments/${c.id}/delete" method="POST" class="d-inline ms-1" onsubmit="return confirm('Are you sure you want to delete this comment?');">
+                                <form action="/comments/${c.id}/delete" method="POST" class="d-inline ms-1 comment-delete-form">
                                     <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
                                 </form>
                             `;
@@ -492,14 +492,41 @@
                         placeholder: 'Write a comment...'
                     });
                     
-                    document.getElementById('modalAddCommentForm').onsubmit = function() {
+                    document.getElementById('modalAddCommentForm').onsubmit = function(e) {
+                        e.preventDefault();
                         var htmlContent = globalCommentQuill.root.innerHTML;
                         if (globalCommentQuill.getText().trim().length === 0 && !htmlContent.includes('<img')) {
                             alert('Please write a comment.');
-                            return false;
+                            return;
                         }
-                        document.getElementById('modalCommentInput').value = htmlContent;
+                        
+                        var formData = new FormData();
+                        formData.append('task_id', task.id);
+                        formData.append('comment', htmlContent);
+                        
+                        fetch('/comments/create', {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(() => {
+                            globalCommentQuill.setText('');
+                            showTaskDetails(task.id);
+                        });
                     };
+                    
+                    // Bind delete comment forms to submit via AJAX
+                    contentDiv.querySelectorAll('.comment-delete-form').forEach(function(form) {
+                        form.addEventListener('submit', function(e) {
+                            e.preventDefault();
+                            if (confirm('Are you sure you want to delete this comment?')) {
+                                fetch(form.getAttribute('action'), {
+                                    method: 'POST'
+                                }).then(() => {
+                                    showTaskDetails(task.id);
+                                });
+                            }
+                        });
+                    });
                     
                     // Attach preview handlers to images inside modal content
                     attachImageListeners();
